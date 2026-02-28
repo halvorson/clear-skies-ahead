@@ -10,22 +10,22 @@ export function requestGeolocation(): Promise<GeolocationCoordinates> {
   });
 }
 
-export function requestCompass(): Promise<number> {
-  return new Promise(async (resolve, reject) => {
-    // iOS 13+ permission request
-    if (
-      typeof (DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> })
-        .requestPermission === 'function'
-    ) {
-      const result = await (
-        DeviceOrientationEvent as unknown as { requestPermission: () => Promise<string> }
-      ).requestPermission();
-      if (result !== 'granted') {
-        reject(new PermissionError('compass'));
-        return;
-      }
-    }
+type IOSDeviceOrientationEvent = typeof DeviceOrientationEvent & {
+  requestPermission: () => Promise<string>;
+};
 
+async function requestIOSCompassPermission(): Promise<void> {
+  const Event = DeviceOrientationEvent as unknown as IOSDeviceOrientationEvent;
+  if (typeof Event.requestPermission !== 'function') return;
+  const result = await Event.requestPermission();
+  if (result !== 'granted') throw new PermissionError('compass');
+}
+
+export async function requestCompass(): Promise<number> {
+  // iOS 13+ requires explicit permission within a user gesture
+  await requestIOSCompassPermission();
+
+  return new Promise((resolve, reject) => {
     let resolved = false;
 
     const timer = setTimeout(() => {
