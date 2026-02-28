@@ -1,0 +1,22 @@
+{
+  "name": "clear-skies-ahead",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy:preview": "vite build && firebase hosting:channel:deploy dev",
+    "deploy:prod": "vite build && firebase deploy --only hosting"
+  },
+  "dependencies": {
+    "@material/web": "^2.0.0",
+    "firebase": "^11.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vite": "^6.0.0",
+    "vite-plugin-pwa": "^1.2.0"
+  }
+}
