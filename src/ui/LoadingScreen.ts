@@ -1,4 +1,3 @@
-import '@material/web/progress/circular-progress.js';
 
 export class LoadingScreen {
   private el: HTMLElement;
@@ -16,7 +15,7 @@ export class LoadingScreen {
           <span class="material-symbols-rounded screen-icon screen-icon--spinning" aria-hidden="true">wb_sunny</span>
           <h1 class="app-title">Clear Skies Ahead</h1>
         </div>
-        <md-circular-progress indeterminate class="loading-spinner"></md-circular-progress>
+        <div class="loading-spinner" role="progressbar" aria-label="Searching"></div>
         <p class="loading-status"></p>
       </div>
       <div class="loading-bottom-zone">

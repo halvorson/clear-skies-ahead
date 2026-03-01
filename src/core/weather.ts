@@ -38,7 +38,7 @@ export async function getSkyCover(point: LatLng): Promise<number> {
 
   const { gridId, gridX, gridY } = pointsData.properties;
   if (!gridId || gridX === undefined || gridY === undefined) {
-    throw new NWSError('Missing grid info in points response');
+    throw new OutOfCoverageError(); // 200 response with no grid = outside NWS coverage
   }
 
   // Step 2: GET /gridpoints/{office}/{gridX},{gridY}

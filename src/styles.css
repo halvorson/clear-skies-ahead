@@ -119,14 +119,18 @@ md-filled-button .material-symbols-rounded {
   max-height: 40vh;
 }
 
-.loading-spinner {
-  --md-circular-progress-active-indicator-color: #5db8d4;
-  --md-circular-progress-size: 48px;
-  margin-bottom: 16px;
+@keyframes css-spin {
+  to { transform: rotate(360deg); }
 }
 
-md-circular-progress {
-  animation-play-state: running;
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid rgba(93, 184, 212, 0.25);
+  border-top-color: #5db8d4;
+  border-radius: 50%;
+  animation: css-spin 0.8s linear infinite;
+  margin-bottom: 16px;
 }
 
 .loading-status {
