@@ -19,7 +19,7 @@ export async function runSearch(origin: LatLng, bearingDeg: number): Promise<Sea
       skyCoverPercent = await getSkyCover(coords);
     } catch (err) {
       if (err instanceof OutOfCoverageError) break; // Reached beyond NWS bounds — stop here
-      throw;
+      throw err;
     }
 
     const clear = isClear(skyCoverPercent);
@@ -51,7 +51,7 @@ export async function runSearch(origin: LatLng, bearingDeg: number): Promise<Sea
         high = mid; // Out of coverage means too far — search closer
         continue;
       }
-      throw;
+      throw err;
     }
 
     const clear = isClear(skyCoverPercent);
