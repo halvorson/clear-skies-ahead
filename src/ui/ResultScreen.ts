@@ -22,8 +22,8 @@ function buildResultCard(result: SearchResult): string {
   if (!result.clearSkyFound) {
     return `
       <div class="no-result-card">
-        <p class="no-result-headline">No clear sky within 1,000 miles</p>
-        <p class="no-result-subtext">Try pointing your phone a different way.</p>
+        <p class="no-result-headline">No clear sky within 1,000 miles ${result.compassLabel}</p>
+        <p class="no-result-subtext">Try scanning a different direction.</p>
       </div>
     `;
   }

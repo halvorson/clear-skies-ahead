@@ -29,7 +29,7 @@ body {
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
   padding: 40px 24px;
   text-align: center;
@@ -97,10 +97,6 @@ md-filled-button .material-symbols-rounded {
 }
 
 /* ── Loading screen ───────────────────────────────────────────── */
-.screen--loading {
-  justify-content: flex-start;
-}
-
 @keyframes css-spin {
   to { transform: rotate(360deg); }
 }
