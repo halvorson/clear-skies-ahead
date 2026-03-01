@@ -55,6 +55,13 @@ export class LoadingScreen {
     const distText = row.textContent?.match(/[\d.]+\s*mi/)?.[0] ?? '';
     const icon = isClear ? '☀' : '☁';
 
+    if (skyCoverPercent < 0) {
+      row.textContent = `—  ${distText} — out of coverage`;
+      row.style.opacity = '0.4';
+      row.style.fontStyle = 'italic';
+      return; // do not set hasLoggedEntry or add placeholder
+    }
+
     let label: string;
     if (isClear) {
       label = 'clear!';
