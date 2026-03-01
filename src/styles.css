@@ -125,6 +125,10 @@ md-filled-button .material-symbols-rounded {
   margin-bottom: 16px;
 }
 
+md-circular-progress {
+  animation-play-state: running;
+}
+
 .loading-status {
   font-size: 15px;
   color: #44474e;
