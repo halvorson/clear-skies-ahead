@@ -59,8 +59,7 @@ body {
   font-size: 16px;
   line-height: 1.6;
   color: #44474e;
-  max-width: 340px;
-  margin: 0 auto;
+  margin: 0;
 }
 
 /* ── Content area ─────────────────────────────────────────────── */
@@ -102,23 +101,6 @@ md-filled-button .material-symbols-rounded {
   justify-content: flex-start;
 }
 
-.loading-top-zone {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  padding: 60px 0 40px;
-  width: 100%;
-}
-
-.loading-bottom-zone {
-  flex: 1;
-  overflow-y: auto;
-  width: 100%;
-  max-height: 40vh;
-}
-
 @keyframes css-spin {
   to { transform: rotate(360deg); }
 }
@@ -130,7 +112,7 @@ md-filled-button .material-symbols-rounded {
   border-top-color: #5db8d4;
   border-radius: 50%;
   animation: css-spin 0.8s linear infinite;
-  margin-bottom: 16px;
+  margin: 0 auto 16px;
 }
 
 .loading-status {
@@ -140,13 +122,10 @@ md-filled-button .material-symbols-rounded {
 }
 
 .loading-log {
-  margin-top: 0;
   width: 100%;
   text-align: left;
   font-size: 13px;
   line-height: 2;
-  font-family: monospace;
-  opacity: 0.8;
 }
 
 /* ── Result card ──────────────────────────────────────────────── */
@@ -209,28 +188,6 @@ md-filled-button .material-symbols-rounded {
   margin: 0;
 }
 
-/* ── Error alert ──────────────────────────────────────────────── */
-.error-alert {
-  width: 100%;
-  background: #ffdad6;
-  border-radius: 12px;
-  padding: 16px;
-  text-align: left;
-  margin-bottom: 8px;
-}
-
-.error-alert-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #410002;
-  margin: 0 0 4px;
-}
-
-.error-alert-body {
-  font-size: 14px;
-  color: #410002;
-  margin: 0;
-}
 
 /* ── History section ──────────────────────────────────────────── */
 .history-section {

@@ -36,8 +36,7 @@ function buildResultCard(result: SearchResult): string {
       <div class="result-compass" aria-hidden="true">
         <span class="material-symbols-rounded" style="transform: rotate(${rotation}deg)">near_me</span>
       </div>
-      <p class="result-headline">${result.nearestClearMiles} miles ${result.compassLabel}</p>
-      <p class="result-subtext">Clear sky is ${result.nearestClearMiles} miles ${result.compassLabel} of you</p>
+      <p class="result-headline">Sky is clear ${result.nearestClearMiles} miles ${result.compassLabel} of you</p>
     </div>
   `;
 }

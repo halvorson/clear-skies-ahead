@@ -80,34 +80,46 @@ Add a focused unit test suite covering `src/core/geo.ts`, `src/core/search.ts`, 
 
 **Files to create:** `src/core/geo.test.ts`, `src/core/weather.test.ts`, `src/core/search.test.ts`
 **Files to modify:** `package.json` (add `vitest` dep + `test` script)
-`[x]` Added `outOfCoverage: boolean` to `SearchResult` and `HistoryEntry`. `search.ts` sets it true when every point has `skyCoverPercent < 0`. Result card shows "No coverage in this direction" with NWS explanation. History uses `public_off` icon and "— no coverage" text. Files: `src/types.ts`, `src/core/search.ts`, `src/ui/ResultScreen.ts`, `src/ui/App.ts`.
-When a search bearing goes over water or into Canada/Mexico, all checked points are outside NWS coverage and return `skyCoverPercent: -1`. Currently these searches fall through to the generic "No clear sky within 1,000 miles" result, which is misleading — the app didn't find clouds, it found no data. Add a distinct third outcome: **out-of-coverage**.
 
-**Part 1 — Detect in `src/core/search.ts`**
-After Phase 1 completes with `firstClearIndex === -1`, check whether every entry in `points[]` has `skyCoverPercent < 0`. If yes, the search ran entirely out of coverage. Set `outOfCoverage: true` in the returned `SearchResult`. If there's a mix of real cloudy readings and out-of-coverage points, keep `outOfCoverage: false` (genuine "no clear sky").
+---
 
-**Part 2 — Add field to types in `src/types.ts`**
-- `SearchResult`: add `outOfCoverage: boolean` (false when clear sky found or when there were real cloudy readings).
-- `HistoryEntry`: add `outOfCoverage: boolean`.
+### Task 19 — Automated CI/CD via GitHub Actions
+`[ ]`
+Replace the current manual deploy workflow with two automated pipelines:
 
-**Part 3 — Custom result card in `src/ui/ResultScreen.ts`**
-In `buildResultCard`, add a third branch before the existing `!result.clearSkyFound` branch:
-```
-if (result.outOfCoverage):
-  headline: "No coverage in this direction"
-  subtext: "NWS doesn't cover the ocean, Canada, or Mexico. Try a different direction."
-  use the same .no-result-card styling
-```
+**Pipeline 1 — Preview on every push to `main`**
+Re-enable the push trigger in `.github/workflows/deploy-preview.yml`. Every push to `main` should automatically build and deploy to the persistent Firebase Hosting preview channel (`dev`). The preview URL stays stable: `https://clear-skies-ahead--dev-nhdzm47i.web.app`.
 
-**Part 4 — History entry in `src/ui/App.ts` and `src/ui/ResultScreen.ts`**
-- In `App.addToHistory()`, pass `outOfCoverage: result.outOfCoverage`.
-- In `buildHistorySection`, add a third icon/text case: when `entry.outOfCoverage`, use icon `public_off` (no rotation, since there's no meaningful bearing destination) with text `"${entry.compassLabel} — no coverage"`. Apply a distinct CSS class `history-icon--no-coverage` (can share `history-icon--no-result` color or use a slightly different muted tone).
+Changes to `.github/workflows/deploy-preview.yml`:
+- Change the `on:` block from `workflow_dispatch` only to:
+  ```yaml
+  on:
+    push:
+      branches: [main]
+    workflow_dispatch:
+  ```
+- Keep `workflow_dispatch` so it can still be triggered manually if needed.
+- No other changes to the job steps — the existing build + credentials + deploy steps are correct.
 
-**Files:** `src/core/search.ts`, `src/types.ts`, `src/ui/ResultScreen.ts`, `src/ui/App.ts`
+**Pipeline 2 — Production on GitHub release**
+Create `.github/workflows/deploy-production.yml`. When a release is published on GitHub (`on: release: types: [published]`), build and deploy to Firebase Hosting production (`firebase deploy --only hosting`).
+
+The new file should mirror the structure of `deploy-preview.yml` exactly, with two differences:
+1. The `on:` trigger is `release: types: [published]`.
+2. The deploy step uses `npx firebase-tools@15 deploy --only hosting --project clear-skies-ahead` instead of `hosting:channel:deploy dev`.
+
+All the same secrets (`VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_MEASUREMENT_ID`, `GOOGLE_APPLICATION_CREDENTIALS_B64`) are already configured in the repo and apply to both workflows.
+
+**npm scripts — no change needed.** `npm run deploy:preview` and `npm run deploy:prod` remain as manual escape hatches.
+
+**Files:** `.github/workflows/deploy-preview.yml` (modify), `.github/workflows/deploy-production.yml` (create)
 
 ---
 
 ## Completed
+
+### ✅ Task 17 — Custom out-of-coverage result and history entry
+`[x]` Added `outOfCoverage: boolean` to `SearchResult` and `HistoryEntry`. `search.ts` sets it true when every point has `skyCoverPercent < 0`. Result card shows "No coverage in this direction" with checked distance and NWS explanation. History uses `navigation` icon with "— no coverage (X mi)" text. Files: `src/types.ts`, `src/core/search.ts`, `src/ui/ResultScreen.ts`, `src/ui/App.ts`.
 
 ### ✅ Task 15 — Disable GitHub Actions auto-deploy
 `[x]` Removed push triggers from `.github/workflows/deploy-preview.yml`; deploy now runs manually via `npm run deploy:preview`. Workflow still available via `workflow_dispatch`.

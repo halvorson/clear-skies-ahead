@@ -52,7 +52,7 @@ export class App {
     // then await the result after geolocation completes.
     const iosCompassPermission = requestIOSCompassPermission();
 
-    const loading = new LoadingScreen(this.container);
+    const loading = new LoadingScreen(this.container, [...this.history]);
     this.transition(loading);
     this.state = 'REQUESTING_PERMISSIONS';
 
@@ -122,6 +122,10 @@ export class App {
         (miles) => {
           pendingRow = loading.startEntry(miles);
         },
+        (phase) => {
+          if (phase === 'exponential') loading.addPhaseLabel('Scanning outward');
+          else loading.addPhaseLabel('Narrowing down');
+        },
       );
       // Resolve any final pending row that didn't get a progress callback
       // (shouldn't happen, but be safe)
@@ -157,7 +161,7 @@ export class App {
   ): void {
     this.state = 'ERROR';
     this.transition(
-      new ErrorScreen(this.container, errorType, () => this.showLanding(), debugContext),
+      new ErrorScreen(this.container, errorType, () => this.showLanding(), debugContext, [...this.history]),
     );
   }
 

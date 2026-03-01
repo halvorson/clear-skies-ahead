@@ -13,16 +13,20 @@ export type SearchProgressCallback = (
 
 export type SearchCheckingCallback = (distanceMiles: number) => void;
 
+export type SearchPhaseCallback = (phase: 'exponential' | 'binary') => void;
+
 export async function runSearch(
   origin: LatLng,
   bearingDeg: number,
   onProgress?: SearchProgressCallback,
   onChecking?: SearchCheckingCallback,
+  onPhaseChange?: SearchPhaseCallback,
 ): Promise<SearchResult> {
   const points: SearchPoint[] = [];
   let firstClearIndex = -1;
 
   // Phase 1 — Exponential expansion
+  onPhaseChange?.('exponential');
   for (let i = 0; i < DISTANCES.length; i++) {
     const distance = DISTANCES[i];
     const coords = projectPoint(origin, bearingDeg, distance);
@@ -65,6 +69,7 @@ export async function runSearch(
   }
 
   // Phase 2 — Binary narrowing (max 4 halvings, or stop when gap ≤ 1 mile)
+  onPhaseChange?.('binary');
   let low = firstClearIndex < 2 ? 0 : DISTANCES[firstClearIndex - 2];
   let high = DISTANCES[firstClearIndex];
   let halvings = 0;
