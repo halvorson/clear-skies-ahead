@@ -9,6 +9,15 @@ function timeAgo(timestamp: number): string {
 }
 
 function buildResultCard(result: SearchResult): string {
+  if (result.outOfCoverage) {
+    return `
+      <div class="no-result-card">
+        <p class="no-result-headline">No coverage in this direction</p>
+        <p class="no-result-subtext">NWS doesn't cover the ocean, Canada, or Mexico. Try a different direction.</p>
+      </div>
+    `;
+  }
+
   if (!result.clearSkyFound) {
     return `
       <div class="no-result-card">
@@ -36,13 +45,31 @@ function buildHistorySection(history: HistoryEntry[]): string {
   if (history.length === 0) return '';
 
   const entries = history.map(entry => {
-    const iconClass = entry.clearSkyFound ? 'history-icon' : 'history-icon history-icon--no-result';
-    const text = entry.clearSkyFound
-      ? `${entry.compassLabel} — ${entry.distanceMiles} mi`
-      : `${entry.compassLabel} — no clear sky`;
+    let iconName: string;
+    let iconClass: string;
+    let text: string;
+    let dataBearing: string;
+
+    if (entry.outOfCoverage) {
+      iconName = 'public_off';
+      iconClass = 'history-icon history-icon--no-result';
+      text = `${entry.compassLabel} — no coverage`;
+      dataBearing = ''; // no rotation for coverage icons
+    } else if (entry.clearSkyFound) {
+      iconName = 'navigation';
+      iconClass = 'history-icon';
+      text = `${entry.compassLabel} — ${entry.distanceMiles} mi`;
+      dataBearing = `data-bearing="${entry.bearingDegrees}"`;
+    } else {
+      iconName = 'navigation';
+      iconClass = 'history-icon history-icon--no-result';
+      text = `${entry.compassLabel} — no clear sky`;
+      dataBearing = `data-bearing="${entry.bearingDegrees}"`;
+    }
+
     return `
       <div class="history-entry">
-        <span class="material-symbols-rounded ${iconClass}" aria-hidden="true" data-bearing="${entry.bearingDegrees}">navigation</span>
+        <span class="material-symbols-rounded ${iconClass}" aria-hidden="true" ${dataBearing}>${iconName}</span>
         <span class="history-entry-text">${text}</span>
         <span class="history-entry-time">${timeAgo(entry.timestamp)}</span>
       </div>

@@ -52,8 +52,10 @@ export async function runSearch(
   }
 
   if (firstClearIndex === -1) {
+    const outOfCoverage = points.length > 0 && points.every(p => p.skyCoverPercent < 0);
     return {
       clearSkyFound: false,
+      outOfCoverage,
       nearestClearMiles: 0,
       bearingDegrees: bearingDeg,
       compassLabel: bearingToCompass(bearingDeg),
@@ -98,6 +100,7 @@ export async function runSearch(
 
   return {
     clearSkyFound: true,
+    outOfCoverage: false,
     nearestClearMiles: roundToHalfMile(high),
     bearingDegrees: bearingDeg,
     compassLabel: bearingToCompass(bearingDeg),

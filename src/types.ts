@@ -19,6 +19,8 @@ export interface SearchPoint {
 export interface SearchResult {
   /** True if clear sky was found. False means all checked points were cloudy/out-of-coverage. */
   clearSkyFound: boolean;
+  /** True when every checked point was outside NWS coverage (ocean, Canada, Mexico). Implies clearSkyFound is false. */
+  outOfCoverage: boolean;
   /** Distance to nearest clear sky, rounded to nearest 0.5 miles. Only meaningful when clearSkyFound is true. */
   nearestClearMiles: number;
   /** Exact bearing used for the search (raw device reading, not rounded). */
@@ -36,6 +38,7 @@ export interface SearchResult {
 export interface HistoryEntry {
   compassLabel: string;
   clearSkyFound: boolean;
+  outOfCoverage: boolean;
   distanceMiles: number;
   bearingDegrees: number;
   /** Date.now() at the moment the search completed. */

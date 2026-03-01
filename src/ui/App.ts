@@ -165,6 +165,7 @@ export class App {
     this.history.unshift({
       compassLabel: result.compassLabel,
       clearSkyFound: result.clearSkyFound,
+      outOfCoverage: result.outOfCoverage,
       distanceMiles: result.nearestClearMiles,
       bearingDegrees: result.bearingDegrees,
       timestamp: Date.now(),
