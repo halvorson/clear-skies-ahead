@@ -116,7 +116,30 @@ All the same secrets (`VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VIT
 
 ---
 
+### Task 20 — Open Graph meta tags for link previews
+`[x]` Added `<meta name="description">`, full Open Graph block (`og:type`, `og:url`, `og:title`, `og:description`, `og:image`, `og:site_name`), and Twitter/X card tags (`twitter:card`, `twitter:title`, `twitter:description`, `twitter:image`) to `index.html`. Image points to `/icons/icon-512.png` on the production domain. Shipped as v1.0.1 hotfix. File: `index.html`.
+
+Add Open Graph and Twitter/X Card meta tags to `index.html` so that link previews work correctly when the app URL is shared on iMessage, Slack, X, etc.
+
+**Tags to add (in `<head>`, after existing meta tags):**
+- `<meta name="description">` — plain text description for SEO and fallback
+- `og:type` = `website`
+- `og:url` = `https://clear-skies-ahead.web.app`
+- `og:title` = `Clear Skies Ahead`
+- `og:description` = one-liner describing the app
+- `og:image` = `https://clear-skies-ahead.web.app/icons/icon-512.png`
+- `og:site_name` = `Clear Skies Ahead`
+- `twitter:card` = `summary` (square icon, not landscape)
+- `twitter:title`, `twitter:description`, `twitter:image` — same values as OG
+
+**File:** `index.html`
+
+---
+
 ## Completed
+
+### ✅ Task 19 — Automated CI/CD via GitHub Actions
+`[x]` Re-enabled push trigger on `deploy-preview.yml` (auto-deploys to preview channel on push to `main`). Created `deploy-production.yml` (auto-deploys to production on GitHub release). Both workflows pass all 7 Firebase config vars. Shipped with v1.0.0.
 
 ### ✅ Task 17 — Custom out-of-coverage result and history entry
 `[x]` Added `outOfCoverage: boolean` to `SearchResult` and `HistoryEntry`. `search.ts` sets it true when every point has `skyCoverPercent < 0`. Result card shows "No coverage in this direction" with checked distance and NWS explanation. History uses `navigation` icon with "— no coverage (X mi)" text. Files: `src/types.ts`, `src/core/search.ts`, `src/ui/ResultScreen.ts`, `src/ui/App.ts`.
