@@ -32,7 +32,11 @@
 | PR written | #11 — https://github.com/halvorson/clear-skies-ahead/pull/11 |
 | Reviewed by | **Agent C** |
 | Reviews | Agent A's PR |
+<<<<<<< HEAD
+| Status | ✅ merged |
+=======
 | Status | 🟢 pr open |
+>>>>>>> origin/main
 
 ---
 
@@ -42,8 +46,8 @@
 |---|---|
 | Branch | `task/c-loading-logic` |
 | Files | `src/ui/LoadingScreen.ts`, `src/ui/App.ts`, `src/core/search.ts` |
-| PR written | — |
+| PR written | #12 — https://github.com/halvorson/clear-skies-ahead/pull/12 |
 | Reviewed by | **Agent A** |
 | Reviews | Agent B's PR |
-| Status | ⏳ waiting for B to merge |
+| Status | 🟢 pr open |
 | Note | Branch from main **after** B's PR merges |

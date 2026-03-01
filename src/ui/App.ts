@@ -109,12 +109,25 @@ export class App {
 
     let result: SearchResult;
     try {
+      let pendingRow: HTMLElement | null = null;
       result = await runSearch(
         { lat: coords.latitude, lng: coords.longitude },
         bearing,
-        (miles, sky, clear) => loading.addProgressEntry(miles, sky, clear),
+        (miles, sky, clear) => {
+          if (pendingRow) {
+            loading.resolveEntry(pendingRow, sky, clear);
+            pendingRow = null;
+          }
+        },
+        (miles) => {
+          pendingRow = loading.startEntry(miles);
+        },
       );
+      // Resolve any final pending row that didn't get a progress callback
+      // (shouldn't happen, but be safe)
+      loading.finalize();
     } catch (err) {
+      loading.finalize();
       this.showError('unknown', {
         coords: debugCoords,
         bearingDegrees: bearing,
