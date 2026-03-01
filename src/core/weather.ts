@@ -93,5 +93,5 @@ export async function getSkyCover(point: LatLng): Promise<number> {
 }
 
 export function isClear(skyCoverPercent: number): boolean {
-  return skyCoverPercent <= 25;
+  return skyCoverPercent <= 50;
 }

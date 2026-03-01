@@ -53,7 +53,7 @@ export class LoadingScreen {
   private el: HTMLElement;
   private statusEl: HTMLElement;
   private logEl: HTMLElement;
-  private hasLoggedEntry = false;
+  private lastLoggedIsClear: boolean | null = null;
   private placeholderEl: HTMLElement | null = null;
 
   constructor(container: HTMLElement, history: HistoryEntry[] = []) {
@@ -136,18 +136,16 @@ export class LoadingScreen {
 
     let label: string;
     if (isClear) {
-      label = 'clear!';
-    } else if (!this.hasLoggedEntry) {
-      label = `cloudy (${skyCoverPercent}%)`;
+      label = this.lastLoggedIsClear === true ? 'still clear!' : 'clear!';
     } else {
-      label = `still cloudy (${skyCoverPercent}%)`;
+      label = this.lastLoggedIsClear === false ? `still cloudy (${skyCoverPercent}%)` : `cloudy (${skyCoverPercent}%)`;
     }
 
     row.textContent = `${icon}  ${distText} — ${label}`;
     row.style.opacity = isClear ? '1' : '0.55';
     row.style.fontStyle = '';
 
-    this.hasLoggedEntry = true;
+    this.lastLoggedIsClear = isClear;
 
     this.addPlaceholder();
   }
