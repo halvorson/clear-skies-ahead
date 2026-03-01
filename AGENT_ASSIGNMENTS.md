@@ -16,10 +16,10 @@
 |---|---|
 | Branch | `task/a-compass-icon` |
 | Files | `src/ui/ResultScreen.ts`, `src/styles.css` |
-| PR written | — |
+| PR written | #10 — https://github.com/halvorson/clear-skies-ahead/pull/10 |
 | Reviewed by | **Agent B** |
 | Reviews | Agent C's PR |
-| Status | 🟡 writing |
+| Status | 🟢 pr open |
 
 ---
 
