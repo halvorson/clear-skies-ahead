@@ -19,7 +19,7 @@
 | PR written | #10 — https://github.com/halvorson/clear-skies-ahead/pull/10 |
 | Reviewed by | **Agent B** |
 | Reviews | Agent C's PR |
-| Status | 🟢 pr open |
+| Status | ✅ merged |
 
 ---
 
@@ -29,10 +29,10 @@
 |---|---|
 | Branch | `task/b-loading-visual` |
 | Files | `src/ui/LoadingScreen.ts`, `src/styles.css` |
-| PR written | — |
+| PR written | #11 — https://github.com/halvorson/clear-skies-ahead/pull/11 |
 | Reviewed by | **Agent C** |
 | Reviews | Agent A's PR |
-| Status | 🟡 writing |
+| Status | 🟢 pr open |
 
 ---
 

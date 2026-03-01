@@ -22,18 +22,6 @@ Read TASKS.md in the repo root. For every task listed under "Pending Tasks", imp
 
 ---
 
-### Task 4 — Spin the sun icon while searching
-`[ ]`
-On the **LoadingScreen**, animate the `wb_sunny` `.screen-icon` with a continuous slow CSS rotation (`animation: spin 4s linear infinite`). Add the `@keyframes spin` rule to `src/styles.css`. Remove or pause the animation on other screens (it only needs to appear on loading).
-
----
-
-### Task 5 — Lock the spinner/status area in place while search log grows
-`[ ]`
-Currently the spinner + status text shift upward as log rows are appended below them. Fix the layout so the spinner and status stay vertically centered in the upper portion of the screen while the log grows downward. Approach: give the loading screen a two-zone layout — top zone (fixed height or flexbox with `flex: 0`) containing the spinner and status, bottom zone (`flex: 1; overflow-y: auto`) containing the log.
-
----
-
 ### Task 6 — Newest search-log entry at top, not bottom
 `[ ]`
 On the **LoadingScreen**, `addProgressEntry` currently appends rows to the bottom of `.loading-log`. Prepend instead (`logEl.prepend(row)`) so the most recent check is always visible at the top without scrolling.
@@ -62,6 +50,12 @@ This requires `addProgressEntry` to accept a "start" call and a "resolve" call, 
 ---
 
 ## Completed
+
+### ✅ Task 4 — Spin the sun icon while searching
+`[x]` — Added `@keyframes spin` and `.screen-icon--spinning` class to `src/styles.css`; applied spinning class to sun icon in `src/ui/LoadingScreen.ts`.
+
+### ✅ Task 5 — Lock the spinner/status area in place while search log grows
+`[x]` — Restructured LoadingScreen HTML into a two-zone flex layout: pinned top zone (spinner + status) and scrollable bottom zone (log). Overrode `.screen` centering with `.screen--loading { justify-content: flex-start }` in `src/styles.css`.
 
 ### ✅ Task 1 — Live compass on most-recent result icon
 `[x]` Added `deviceorientationabsolute`/`deviceorientation` listener in `ResultScreen.ts` that rotates the `.result-compass` icon in real-time. Listener removed in `destroy()`.
