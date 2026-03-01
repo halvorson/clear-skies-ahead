@@ -2,7 +2,11 @@ import { LandingScreen } from './LandingScreen';
 import { LoadingScreen } from './LoadingScreen';
 import { ResultScreen } from './ResultScreen';
 import { ErrorScreen } from './ErrorScreen';
-import { requestGeolocation, requestCompass } from '../core/permissions';
+import {
+  requestGeolocation,
+  requestIOSCompassPermission,
+  waitForCompassReading,
+} from '../core/permissions';
 import { runSearch } from '../core/search';
 import {
   logSearchStarted,
@@ -43,6 +47,11 @@ export class App {
   private async startSearch(): Promise<void> {
     logSearchStarted();
 
+    // iOS 13+ requires DeviceOrientationEvent.requestPermission() to be called
+    // synchronously within a user gesture. Fire it now — before any awaits —
+    // then await the result after geolocation completes.
+    const iosCompassPermission = requestIOSCompassPermission();
+
     const loading = new LoadingScreen(this.container);
     this.transition(loading);
     this.state = 'REQUESTING_PERMISSIONS';
@@ -77,7 +86,8 @@ export class App {
 
     loading.setStatus('Reading compass…');
     try {
-      bearing = await requestCompass();
+      await iosCompassPermission;
+      bearing = await waitForCompassReading();
     } catch (err) {
       if (err instanceof PermissionError) {
         logPermissionDenied(err.permissionType);

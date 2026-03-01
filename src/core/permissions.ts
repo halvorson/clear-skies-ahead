@@ -14,17 +14,18 @@ type IOSDeviceOrientationEvent = typeof DeviceOrientationEvent & {
   requestPermission: () => Promise<string>;
 };
 
-async function requestIOSCompassPermission(): Promise<void> {
+// Must be called synchronously within a user gesture on iOS 13+.
+// Call this before any awaits in the gesture handler, then await the result later.
+export async function requestIOSCompassPermission(): Promise<void> {
   const Event = DeviceOrientationEvent as unknown as IOSDeviceOrientationEvent;
   if (typeof Event.requestPermission !== 'function') return;
   const result = await Event.requestPermission();
   if (result !== 'granted') throw new PermissionError('compass');
 }
 
-export async function requestCompass(): Promise<number> {
-  // iOS 13+ requires explicit permission within a user gesture
-  await requestIOSCompassPermission();
-
+// Registers orientation listeners and resolves with the first valid bearing.
+// Call this after requestIOSCompassPermission() has already been awaited.
+export function waitForCompassReading(): Promise<number> {
   return new Promise((resolve, reject) => {
     let resolved = false;
 
