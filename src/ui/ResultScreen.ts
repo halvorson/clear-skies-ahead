@@ -60,6 +60,8 @@ function buildHistorySection(history: HistoryEntry[]): string {
 
 export class ResultScreen {
   private el: HTMLElement;
+  private orientationHandler: ((event: DeviceOrientationEvent) => void) | null = null;
+  private activeOrientationEvent: string | null = null;
 
   constructor(
     container: HTMLElement,
@@ -92,9 +94,60 @@ export class ResultScreen {
 
     const btn = this.el.querySelector('.result-btn') as HTMLElement;
     btn.addEventListener('click', onCtaTap);
+
+    this.startCompassListener();
+  }
+
+  private startCompassListener(): void {
+    this.orientationHandler = (event: DeviceOrientationEvent) => {
+      // Deduplicate: once we know which event fires, ignore the other
+      const eventType = event.type;
+      if (this.activeOrientationEvent === null) {
+        this.activeOrientationEvent = eventType;
+      } else if (eventType !== this.activeOrientationEvent) {
+        return;
+      }
+
+      // Extract heading: prefer webkitCompassHeading (iOS), else derive from alpha
+      let heading: number | null = null;
+      if ('webkitCompassHeading' in event && typeof (event as any).webkitCompassHeading === 'number') {
+        heading = (event as any).webkitCompassHeading as number;
+      } else if (event.alpha !== null) {
+        heading = (360 - event.alpha) % 360;
+      }
+
+      if (heading === null) return;
+
+      // Rotate: -45 corrects for the near_me icon's NE default orientation
+      const rotation = heading - 45;
+      const transform = `rotate(${rotation}deg)`;
+
+      // Update result-card compass icon
+      const compassIcon = this.el.querySelector('.result-compass .material-symbols-rounded') as HTMLElement | null;
+      if (compassIcon) {
+        compassIcon.style.transform = transform;
+      }
+
+      // Update all history icons
+      const historyIcons = this.el.querySelectorAll('.history-icon') as NodeListOf<HTMLElement>;
+      historyIcons.forEach(icon => {
+        icon.style.transform = transform;
+      });
+    };
+
+    window.addEventListener('deviceorientationabsolute', this.orientationHandler as EventListener);
+    window.addEventListener('deviceorientation', this.orientationHandler as EventListener);
   }
 
   show(): void { this.el.style.display = ''; }
   hide(): void { this.el.style.display = 'none'; }
-  destroy(): void { this.el.remove(); }
+
+  destroy(): void {
+    if (this.orientationHandler) {
+      window.removeEventListener('deviceorientationabsolute', this.orientationHandler as EventListener);
+      window.removeEventListener('deviceorientation', this.orientationHandler as EventListener);
+      this.orientationHandler = null;
+    }
+    this.el.remove();
+  }
 }
