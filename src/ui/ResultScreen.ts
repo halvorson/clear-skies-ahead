@@ -42,7 +42,7 @@ function buildHistorySection(history: HistoryEntry[]): string {
       : `${entry.compassLabel} — no clear sky`;
     return `
       <div class="history-entry">
-        <span class="material-symbols-rounded ${iconClass}" aria-hidden="true">explore</span>
+        <span class="material-symbols-rounded ${iconClass}" aria-hidden="true" data-bearing="${entry.bearingDegrees}">navigation</span>
         <span class="history-entry-text">${text}</span>
         <span class="history-entry-time">${timeAgo(entry.timestamp)}</span>
       </div>
@@ -62,6 +62,7 @@ export class ResultScreen {
   private el: HTMLElement;
   private orientationHandler: ((event: DeviceOrientationEvent) => void) | null = null;
   private activeOrientationEvent: string | null = null;
+  private resultBearing: number;
 
   constructor(
     container: HTMLElement,
@@ -69,6 +70,7 @@ export class ResultScreen {
     history: HistoryEntry[],
     onCtaTap: () => void,
   ) {
+    this.resultBearing = result.bearingDegrees;
     this.el = document.createElement('div');
     this.el.className = 'screen screen--result';
 
@@ -118,20 +120,21 @@ export class ResultScreen {
 
       if (heading === null) return;
 
-      // Rotate: -45 corrects for the near_me icon's NE default orientation
-      const rotation = heading - 45;
-      const transform = `rotate(${rotation}deg)`;
+      // Result compass: point toward clear sky relative to current heading
+      const resultRotation = (this.resultBearing - heading + 360) % 360 - 45;
 
       // Update result-card compass icon
       const compassIcon = this.el.querySelector('.result-compass .material-symbols-rounded') as HTMLElement | null;
       if (compassIcon) {
-        compassIcon.style.transform = transform;
+        compassIcon.style.transform = `rotate(${resultRotation}deg)`;
       }
 
-      // Update all history icons
+      // Update all history icons (compute rotation per icon based on its stored bearing)
       const historyIcons = this.el.querySelectorAll('.history-icon') as NodeListOf<HTMLElement>;
       historyIcons.forEach(icon => {
-        icon.style.transform = transform;
+        const bearing = parseFloat(icon.dataset.bearing ?? '0');
+        const historyRotation = (bearing - heading + 360) % 360;
+        icon.style.transform = `rotate(${historyRotation}deg)`;
       });
     };
 
