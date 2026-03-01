@@ -47,13 +47,20 @@ function buildDebugText(rows: Array<[string, string]>): string {
   return rows.map(([k, v]) => `${k}: ${v}`).join('\n');
 }
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 function buildDebugPanel(
   errorType: PermissionType | 'unknown',
   ctx: DebugContext | undefined,
 ): string {
   const rows: Array<[string, string]> = [];
 
-  // ── Location ──────────────────────────────────────────────────────────────
   if (ctx?.coords) {
     const { latitude, longitude, accuracy, altitude, altitudeAccuracy } = ctx.coords;
     rows.push(['Latitude', latitude.toFixed(6)]);
@@ -67,7 +74,6 @@ function buildDebugPanel(
     rows.push(['Location', 'not available']);
   }
 
-  // ── Compass ───────────────────────────────────────────────────────────────
   if (ctx?.bearingDegrees !== undefined) {
     const deg = ctx.bearingDegrees;
     rows.push(['Bearing', `${deg.toFixed(1)}° (${bearingToCardinal(deg)})`]);
@@ -75,7 +81,6 @@ function buildDebugPanel(
     rows.push(['Bearing', 'not available']);
   }
 
-  // ── Browser / device ──────────────────────────────────────────────────────
   rows.push(['User agent', navigator.userAgent]);
   rows.push(['Geolocation API', 'geolocation' in navigator ? 'supported' : 'not supported']);
 
@@ -86,12 +91,10 @@ function buildDebugPanel(
     hasAbsolute ? 'absolute supported' : hasRelative ? 'relative only' : 'not supported',
   ]);
 
-  // ── Error context ─────────────────────────────────────────────────────────
   rows.push(['Error type', errorType]);
   if (ctx?.errorMessage) {
     rows.push(['Error message', ctx.errorMessage]);
   }
-
   rows.push(['Timestamp', new Date().toISOString()]);
 
   const debugText = buildDebugText(rows);
@@ -105,26 +108,18 @@ function buildDebugPanel(
     .join('');
 
   return `
-    <details style="margin-top:24px;text-align:left;border:1px solid rgba(255,255,255,0.3);border-radius:8px;padding:12px;background:rgba(0,0,0,0.15)" open>
-      <summary style="cursor:pointer;font-size:12px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;opacity:0.8;margin-bottom:8px">
+    <details style="margin-top:24px;text-align:left;border:1px solid rgba(0,0,0,0.12);border-radius:8px;padding:12px;background:rgba(0,0,0,0.04);width:100%" open>
+      <summary style="cursor:pointer;font-size:12px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;opacity:0.7;margin-bottom:8px">
         Debug info (preproduction)
       </summary>
-      <table style="font-size:12px;border-collapse:collapse;width:100%">
+      <table style="font-size:12px;border-collapse:collapse;width:100%;color:#1b1c1e">
         <tbody>${tableRows}</tbody>
       </table>
-      <button data-debug-text="${escapeHtml(debugText)}" style="margin-top:10px;font-size:11px;padding:4px 10px;border:1px solid rgba(255,255,255,0.4);border-radius:4px;background:rgba(255,255,255,0.1);color:inherit;cursor:pointer">
+      <button data-debug-text="${escapeHtml(debugText)}" style="margin-top:10px;font-size:11px;padding:4px 10px;border:1px solid rgba(0,0,0,0.3);border-radius:4px;background:rgba(0,0,0,0.06);color:#44474e;cursor:pointer">
         Copy
       </button>
     </details>
   `;
-}
-
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }
 
 export class ErrorScreen {
@@ -145,10 +140,16 @@ export class ErrorScreen {
       : '';
 
     this.el.innerHTML = `
-      <div class="error-content">
-        <h2 class="error-heading">${config.heading}</h2>
-        <p class="error-body">${config.body}</p>
-        ${config.showRetry ? '<md-filled-button class="error-retry-btn">Try again</md-filled-button>' : ''}
+      <div class="screen-header">
+        <span class="material-symbols-rounded screen-icon" aria-hidden="true">wb_sunny</span>
+        <h1 class="app-title">Clear Skies Ahead</h1>
+      </div>
+      <div class="screen-content">
+        <div class="error-alert" role="alert">
+          <p class="error-alert-title">${config.heading}</p>
+          <p class="error-alert-body">${config.body}</p>
+        </div>
+        ${config.showRetry ? '<md-filled-button class="cta-fab error-retry-btn">Try again</md-filled-button>' : ''}
         ${debugHtml}
       </div>
     `;
