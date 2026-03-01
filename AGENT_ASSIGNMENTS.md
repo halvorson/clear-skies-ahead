@@ -32,7 +32,11 @@
 | PR written | #11 — https://github.com/halvorson/clear-skies-ahead/pull/11 |
 | Reviewed by | **Agent C** |
 | Reviews | Agent A's PR |
+<<<<<<< HEAD
 | Status | ✅ merged |
+=======
+| Status | 🟢 pr open |
+>>>>>>> origin/main
 
 ---
 
