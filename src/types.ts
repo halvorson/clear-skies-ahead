@@ -37,6 +37,7 @@ export interface HistoryEntry {
   compassLabel: string;
   clearSkyFound: boolean;
   distanceMiles: number;
+  bearingDegrees: number;
   /** Date.now() at the moment the search completed. */
   timestamp: number;
 }

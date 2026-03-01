@@ -166,6 +166,7 @@ export class App {
       compassLabel: result.compassLabel,
       clearSkyFound: result.clearSkyFound,
       distanceMiles: result.nearestClearMiles,
+      bearingDegrees: result.bearingDegrees,
       timestamp: Date.now(),
     });
     if (this.history.length > 10) {

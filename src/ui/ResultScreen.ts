@@ -42,7 +42,7 @@ function buildHistorySection(history: HistoryEntry[]): string {
       : `${entry.compassLabel} — no clear sky`;
     return `
       <div class="history-entry">
-        <span class="material-symbols-rounded ${iconClass}" aria-hidden="true">explore</span>
+        <span class="material-symbols-rounded ${iconClass}" aria-hidden="true" data-bearing="${entry.bearingDegrees}">navigation</span>
         <span class="history-entry-text">${text}</span>
         <span class="history-entry-time">${timeAgo(entry.timestamp)}</span>
       </div>
@@ -129,10 +129,12 @@ export class ResultScreen {
         compassIcon.style.transform = `rotate(${resultRotation}deg)`;
       }
 
-      // Update all history icons
+      // Update all history icons (compute rotation per icon based on its stored bearing)
       const historyIcons = this.el.querySelectorAll('.history-icon') as NodeListOf<HTMLElement>;
       historyIcons.forEach(icon => {
-        icon.style.transform = `rotate(${resultRotation}deg)`;
+        const bearing = parseFloat(icon.dataset.bearing ?? '0');
+        const historyRotation = (bearing - heading + 360) % 360 - 45;
+        icon.style.transform = `rotate(${historyRotation}deg)`;
       });
     };
 
