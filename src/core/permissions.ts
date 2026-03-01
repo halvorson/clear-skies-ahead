@@ -24,12 +24,13 @@ export async function requestIOSCompassPermission(): Promise<void> {
 }
 
 // Registers orientation listeners and resolves with a stable bearing.
-// Waits 200 ms before accepting the first reading — the very first
-// deviceorientation event after permission resolves often carries
-// webkitCompassHeading = 0 while the sensor initialises.
+// Waits 200 ms before accepting readings, then requires two consecutive
+// readings of 0.0° before accepting north — a single 0.0 is treated as
+// a stale sensor-init value and skipped.
 export function waitForCompassReading(): Promise<number> {
   return new Promise((resolve, reject) => {
     let resolved = false;
+    let gotZero = false; // true after seeing one 0.0° reading
 
     const failTimer = setTimeout(() => {
       if (!resolved) {
@@ -49,21 +50,32 @@ export function waitForCompassReading(): Promise<number> {
       resolve(bearing);
     }
 
+    function onHeading(bearing: number) {
+      if (bearing === 0) {
+        if (!gotZero) {
+          gotZero = true; // first 0.0 — might be stale, wait for next event
+          return;
+        }
+        // second 0.0 in a row — user is genuinely facing north
+      }
+      finish(bearing);
+    }
+
     function onAbsolute(event: DeviceOrientationEvent) {
       if (event.alpha === null) return;
-      finish(360 - event.alpha);
+      onHeading(360 - event.alpha);
     }
 
     function onRelative(event: DeviceOrientationEvent) {
       // On iOS, webkitCompassHeading is already north-relative (0–360)
       const e = event as DeviceOrientationEvent & { webkitCompassHeading?: number };
       if (e.webkitCompassHeading !== undefined && e.webkitCompassHeading !== null) {
-        finish(e.webkitCompassHeading);
+        onHeading(e.webkitCompassHeading);
       }
     }
 
     // Delay attaching listeners so the sensor has time to produce a real
-    // reading. Without this, the first event fires with heading = 0.
+    // reading after app resume or permission re-grant.
     setTimeout(() => {
       if (!resolved) {
         window.addEventListener('deviceorientationabsolute', onAbsolute);
