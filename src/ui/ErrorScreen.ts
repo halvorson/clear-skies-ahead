@@ -13,19 +13,19 @@ function getErrorConfig(errorType: PermissionType | 'unknown'): ErrorConfig {
       return {
         heading: 'Location access required',
         body: 'Please enable location access in your browser settings and reload the page.',
-        showRetry: false,
+        showRetry: true,
       };
     case 'compass':
       return {
         heading: 'Compass not available',
         body: 'This app requires compass hardware. It may not be supported on your device or browser.',
-        showRetry: false,
+        showRetry: true,
       };
     case 'unknown':
       return {
         heading: 'Something went wrong',
         body: 'Please reload and try again.',
-        showRetry: false,
+        showRetry: true,
       };
   }
 }
@@ -149,7 +149,7 @@ export class ErrorScreen {
           <p class="error-alert-title">${config.heading}</p>
           <p class="error-alert-body">${config.body}</p>
         </div>
-        ${config.showRetry ? '<md-filled-button class="cta-fab error-retry-btn">Try again</md-filled-button>' : ''}
+        ${config.showRetry ? '<md-filled-button class="cta-fab error-retry-btn">Start over</md-filled-button>' : ''}
         ${debugHtml}
       </div>
     `;
