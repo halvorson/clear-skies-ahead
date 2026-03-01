@@ -9,13 +9,15 @@ export class LoadingScreen {
     this.el = document.createElement('div');
     this.el.className = 'screen screen--loading';
     this.el.innerHTML = `
-      <div class="screen-header">
-        <span class="material-symbols-rounded screen-icon" aria-hidden="true">wb_sunny</span>
-        <h1 class="app-title">Clear Skies Ahead</h1>
-      </div>
-      <div class="screen-content">
+      <div class="loading-top-zone">
+        <div class="screen-header">
+          <span class="material-symbols-rounded screen-icon screen-icon--spinning" aria-hidden="true">wb_sunny</span>
+          <h1 class="app-title">Clear Skies Ahead</h1>
+        </div>
         <md-circular-progress indeterminate class="loading-spinner"></md-circular-progress>
         <p class="loading-status"></p>
+      </div>
+      <div class="loading-bottom-zone">
         <div class="loading-log"></div>
       </div>
     `;
@@ -40,7 +42,8 @@ export class LoadingScreen {
     row.textContent = `${icon}  ${dist} — ${label}`;
     row.style.opacity = clear ? '1' : '0.55';
     this.logEl.appendChild(row);
-    this.logEl.scrollTop = this.logEl.scrollHeight;
+    const bottomZone = this.logEl.parentElement;
+    if (bottomZone) bottomZone.scrollTop = bottomZone.scrollHeight;
   }
 
   show(): void { this.el.style.display = ''; }
