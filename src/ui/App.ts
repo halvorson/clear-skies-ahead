@@ -161,7 +161,7 @@ export class App {
   ): void {
     this.state = 'ERROR';
     this.transition(
-      new ErrorScreen(this.container, errorType, () => this.showLanding(), debugContext, [...this.history]),
+      new ErrorScreen(this.container, errorType, () => this.startSearch(), debugContext, [...this.history]),
     );
   }
 
