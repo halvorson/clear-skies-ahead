@@ -47,8 +47,8 @@ Redesign the loading screen so the transition from landing → searching → res
 
 ---
 
-### Task 17 — Custom result and history entry for out-of-coverage searches
-`[ ]`
+### ✅ Task 17 — Custom result and history entry for out-of-coverage searches
+`[x]` Added `outOfCoverage: boolean` to `SearchResult` and `HistoryEntry`. `search.ts` sets it true when every point has `skyCoverPercent < 0`. Result card shows "No coverage in this direction" with NWS explanation. History uses `public_off` icon and "— no coverage" text. Files: `src/types.ts`, `src/core/search.ts`, `src/ui/ResultScreen.ts`, `src/ui/App.ts`.
 When a search bearing goes over water or into Canada/Mexico, all checked points are outside NWS coverage and return `skyCoverPercent: -1`. Currently these searches fall through to the generic "No clear sky within 1,000 miles" result, which is misleading — the app didn't find clouds, it found no data. Add a distinct third outcome: **out-of-coverage**.
 
 **Part 1 — Detect in `src/core/search.ts`**
