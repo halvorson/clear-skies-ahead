@@ -20,22 +20,6 @@ Read TASKS.md in the repo root. For every task listed under "Pending Tasks", imp
 
 ## Pending Tasks
 
-### Task 1 — Live compass on most-recent result icon
-`[ ]`
-The `near_me` icon inside the yellow `.result-compass` square on the **result card** should rotate in real-time to reflect the device's current compass heading, not the historical bearing of that search. Listen to `deviceorientation` / `deviceorientationabsolute` on the ResultScreen and update the icon's `transform: rotate()` style continuously. Remove the listener on `destroy()`.
-
----
-
-### Task 2 — Live compass on all recent-search history icons
-`[ ]`
-All `explore` icons in the **Recent Searches** list should also rotate in real-time with the device compass (same listener as Task 1 — one listener, update all icons). This gives the whole result screen a live compass feel.
-
----
-
-### Task 3 — Fix vertical alignment of CTA button icon
-`[ ]`
-The `my_location` icon inside `md-filled-button` is vertically misaligned (likely floating high or low relative to the button label). Fix with CSS — the slotted `<span slot="icon">` may need `display: inline-flex; align-items: center;` or `vertical-align: middle` to sit correctly.
-
 ---
 
 ### Task 6 — Newest search-log entry at top, not bottom
@@ -72,6 +56,15 @@ This requires `addProgressEntry` to accept a "start" call and a "resolve" call, 
 
 ### ✅ Task 5 — Lock the spinner/status area in place while search log grows
 `[x]` — Restructured LoadingScreen HTML into a two-zone flex layout: pinned top zone (spinner + status) and scrollable bottom zone (log). Overrode `.screen` centering with `.screen--loading { justify-content: flex-start }` in `src/styles.css`.
+
+### ✅ Task 1 — Live compass on most-recent result icon
+`[x]` Added `deviceorientationabsolute`/`deviceorientation` listener in `ResultScreen.ts` that rotates the `.result-compass` icon in real-time. Listener removed in `destroy()`.
+
+### ✅ Task 2 — Live compass on all recent-search history icons
+`[x]` Same single orientation listener from Task 1 also updates all `.history-icon` elements with the live heading rotation.
+
+### ✅ Task 3 — Fix vertical alignment of CTA button icon
+`[x]` Added CSS rule `md-filled-button .material-symbols-rounded` with `display: inline-flex; align-items: center; font-size: 18px; line-height: 1` in `src/styles.css`.
 
 ### ✅ Implement Figma design
 `[x]` — PR #7 · branch `feat/figma-design`

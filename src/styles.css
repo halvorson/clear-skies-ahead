@@ -80,6 +80,13 @@ body {
   min-width: 220px;
 }
 
+md-filled-button .material-symbols-rounded {
+  display: inline-flex;
+  align-items: center;
+  font-size: 18px;
+  line-height: 1;
+}
+
 /* ── Spinning sun animation ──────────────────────────────────── */
 @keyframes spin {
   from { transform: rotate(0deg); }
