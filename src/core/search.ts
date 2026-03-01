@@ -5,7 +5,17 @@ import { getSkyCover, isClear } from './weather';
 
 const DISTANCES = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1000];
 
-export async function runSearch(origin: LatLng, bearingDeg: number): Promise<SearchResult> {
+export type SearchProgressCallback = (
+  distanceMiles: number,
+  skyCoverPercent: number,
+  isClear: boolean,
+) => void;
+
+export async function runSearch(
+  origin: LatLng,
+  bearingDeg: number,
+  onProgress?: SearchProgressCallback,
+): Promise<SearchResult> {
   const points: SearchPoint[] = [];
   let firstClearIndex = -1;
 
@@ -24,6 +34,7 @@ export async function runSearch(origin: LatLng, bearingDeg: number): Promise<Sea
 
     const clear = isClear(skyCoverPercent);
     points.push({ distanceMiles: distance, coords, skyCoverPercent, isClear: clear });
+    onProgress?.(distance, skyCoverPercent, clear);
 
     if (clear) {
       firstClearIndex = i;
@@ -56,6 +67,7 @@ export async function runSearch(origin: LatLng, bearingDeg: number): Promise<Sea
 
     const clear = isClear(skyCoverPercent);
     points.push({ distanceMiles: mid, coords, skyCoverPercent, isClear: clear });
+    onProgress?.(mid, skyCoverPercent, clear);
 
     if (clear) {
       high = mid;

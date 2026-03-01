@@ -8,6 +8,7 @@ import {
   waitForCompassReading,
 } from '../core/permissions';
 import { runSearch } from '../core/search';
+import { bearingToCompass } from '../core/geo';
 import {
   logSearchStarted,
   logPermissionDenied,
@@ -105,13 +106,14 @@ export class App {
     }
 
     this.state = 'SEARCHING';
-    loading.setStatus('Searching for clear sky…');
+    loading.setStatus(`Heading ${bearing.toFixed(1)}° ${bearingToCompass(bearing)}`);
 
     let result: SearchResult;
     try {
       result = await runSearch(
         { lat: coords.latitude, lng: coords.longitude },
         bearing,
+        (miles, sky, clear) => loading.addProgressEntry(miles, sky, clear),
       );
     } catch (err) {
       if (err instanceof NoResultError) {
