@@ -51,10 +51,10 @@ function buildHistorySection(history: HistoryEntry[]): string {
     let dataBearing: string;
 
     if (entry.outOfCoverage) {
-      iconName = 'public_off';
+      iconName = 'navigation';
       iconClass = 'history-icon history-icon--no-result';
       text = `${entry.compassLabel} — no coverage`;
-      dataBearing = ''; // no rotation for coverage icons
+      dataBearing = `data-bearing="${entry.bearingDegrees}"`;
     } else if (entry.clearSkyFound) {
       iconName = 'navigation';
       iconClass = 'history-icon';
