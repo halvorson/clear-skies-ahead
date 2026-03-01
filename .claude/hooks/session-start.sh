@@ -49,13 +49,17 @@ else
   echo "→ GITHUB_TOKEN present — gh CLI is authenticated."
 fi
 
-# Firebase CLI picks up FIREBASE_TOKEN automatically for CI auth.
-# NOTE: FIREBASE_TOKEN is deprecated — switching to service account (GOOGLE_APPLICATION_CREDENTIALS).
-# if [ -z "${FIREBASE_TOKEN:-}" ]; then
-#   echo "⚠  FIREBASE_TOKEN not set. Add it to Claude Code secrets to enable Firebase deployments."
-# else
-#   echo "→ FIREBASE_TOKEN present — Firebase CLI is authenticated."
-# fi
+# Firebase auth via service account (GOOGLE_APPLICATION_CREDENTIALS_JSON secret).
+# The secret holds the raw JSON; we write it to a stable file and export the path.
+SA_KEY_FILE="/tmp/firebase-service-account.json"
+if [ -n "${GOOGLE_APPLICATION_CREDENTIALS_JSON:-}" ]; then
+  echo "${GOOGLE_APPLICATION_CREDENTIALS_JSON}" > "${SA_KEY_FILE}"
+  chmod 600 "${SA_KEY_FILE}"
+  echo "GOOGLE_APPLICATION_CREDENTIALS=${SA_KEY_FILE}" >> "${CLAUDE_ENV_FILE}"
+  echo "→ Firebase service account written — Firebase CLI is authenticated."
+else
+  echo "⚠  GOOGLE_APPLICATION_CREDENTIALS_JSON not set. Add it to Claude Code secrets to enable Firebase deployments."
+fi
 
 # ── Write .env.local for Vite build ─────────────────────────────────────────
 # Firebase web config values are injected via Claude Code secrets (VITE_FIREBASE_*).
