@@ -3,7 +3,7 @@ import { OutOfCoverageError } from '../types';
 import { projectPoint, bearingToCompass, roundToHalfMile } from './geo';
 import { getSkyCover, isClear } from './weather';
 
-const DISTANCES = [0, 8, 16, 32, 64, 128, 256, 512, 1000];
+const DISTANCES = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1000];
 
 export type SearchProgressCallback = (
   distanceMiles: number,
