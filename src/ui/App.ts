@@ -166,7 +166,9 @@ export class App {
       compassLabel: result.compassLabel,
       clearSkyFound: result.clearSkyFound,
       outOfCoverage: result.outOfCoverage,
-      distanceMiles: result.nearestClearMiles,
+      distanceMiles: result.outOfCoverage
+        ? Math.max(...result.points.map(p => p.distanceMiles))
+        : result.nearestClearMiles,
       bearingDegrees: result.bearingDegrees,
       timestamp: Date.now(),
     });

@@ -10,10 +10,11 @@ function timeAgo(timestamp: number): string {
 
 function buildResultCard(result: SearchResult): string {
   if (result.outOfCoverage) {
+    const farthest = Math.max(...result.points.map(p => p.distanceMiles));
     return `
       <div class="no-result-card">
         <p class="no-result-headline">No coverage in this direction</p>
-        <p class="no-result-subtext">NWS doesn't cover the ocean, Canada, or Mexico. Try a different direction.</p>
+        <p class="no-result-subtext">Checked up to ${farthest} miles — NWS doesn't cover the ocean, Canada, or Mexico. Try a different direction.</p>
       </div>
     `;
   }
@@ -53,7 +54,7 @@ function buildHistorySection(history: HistoryEntry[]): string {
     if (entry.outOfCoverage) {
       iconName = 'navigation';
       iconClass = 'history-icon history-icon--no-result';
-      text = `${entry.compassLabel} — no coverage`;
+      text = `${entry.compassLabel} — no coverage (${entry.distanceMiles} mi)`;
       dataBearing = `data-bearing="${entry.bearingDegrees}"`;
     } else if (entry.clearSkyFound) {
       iconName = 'navigation';
