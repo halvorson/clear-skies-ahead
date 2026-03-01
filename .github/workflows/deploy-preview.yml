@@ -1,7 +1,9 @@
 name: Deploy to Firebase Preview Channel
 
 on:
-  workflow_dispatch: # push triggers disabled — deploy manually via npm run deploy:preview
+  push:
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   deploy:
