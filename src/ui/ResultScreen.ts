@@ -133,7 +133,7 @@ export class ResultScreen {
       const historyIcons = this.el.querySelectorAll('.history-icon') as NodeListOf<HTMLElement>;
       historyIcons.forEach(icon => {
         const bearing = parseFloat(icon.dataset.bearing ?? '0');
-        const historyRotation = (bearing - heading + 360) % 360 - 45;
+        const historyRotation = (bearing - heading + 360) % 360;
         icon.style.transform = `rotate(${historyRotation}deg)`;
       });
     };
