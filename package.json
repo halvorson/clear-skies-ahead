@@ -7,8 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy:preview": "vite build && firebase hosting:channel:deploy dev",
-    "deploy:prod": "vite build && firebase deploy --only hosting"
+    "deploy:preview": "VITE_APP_ENV=preproduction vite build && firebase hosting:channel:deploy dev",
+    "deploy:prod": "VITE_APP_ENV=production vite build && firebase deploy --only hosting"
   },
   "dependencies": {
     "@material/web": "^2.0.0",

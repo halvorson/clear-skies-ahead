@@ -38,6 +38,22 @@ export interface HistoryEntry {
   timestamp: number;
 }
 
+// ─── Debug ────────────────────────────────────────────────────────────────────
+
+/** Diagnostic snapshot passed to error screens in preproduction builds. */
+export interface DebugContext {
+  coords?: {
+    latitude: number;
+    longitude: number;
+    accuracy: number;
+    altitude: number | null;
+    altitudeAccuracy: number | null;
+  };
+  bearingDegrees?: number;
+  /** Raw error message, if any. */
+  errorMessage?: string;
+}
+
 // ─── App state machine ────────────────────────────────────────────────────────
 
 export type AppState =

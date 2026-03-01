@@ -16,6 +16,7 @@ import {
   type HistoryEntry,
   type SearchResult,
   type AppState,
+  type DebugContext,
 } from '../types';
 
 export class App {
@@ -55,12 +56,24 @@ export class App {
     } catch (err) {
       if (err instanceof PermissionError) {
         logPermissionDenied(err.permissionType);
-        this.showError(err.permissionType);
+        this.showError(err.permissionType, {
+          errorMessage: err instanceof Error ? err.message : String(err),
+        });
       } else {
-        this.showError('unknown');
+        this.showError('unknown', {
+          errorMessage: err instanceof Error ? err.message : String(err),
+        });
       }
       return;
     }
+
+    const debugCoords: DebugContext['coords'] = {
+      latitude: coords.latitude,
+      longitude: coords.longitude,
+      accuracy: coords.accuracy,
+      altitude: coords.altitude,
+      altitudeAccuracy: coords.altitudeAccuracy,
+    };
 
     loading.setStatus('Reading compass…');
     try {
@@ -68,9 +81,15 @@ export class App {
     } catch (err) {
       if (err instanceof PermissionError) {
         logPermissionDenied(err.permissionType);
-        this.showError(err.permissionType);
+        this.showError(err.permissionType, {
+          coords: debugCoords,
+          errorMessage: err instanceof Error ? err.message : String(err),
+        });
       } else {
-        this.showError('unknown');
+        this.showError('unknown', {
+          coords: debugCoords,
+          errorMessage: err instanceof Error ? err.message : String(err),
+        });
       }
       return;
     }
@@ -87,9 +106,13 @@ export class App {
     } catch (err) {
       if (err instanceof NoResultError) {
         logNoResultFound();
-        this.showError('no_result');
+        this.showError('no_result', { coords: debugCoords, bearingDegrees: bearing });
       } else {
-        this.showError('unknown');
+        this.showError('unknown', {
+          coords: debugCoords,
+          bearingDegrees: bearing,
+          errorMessage: err instanceof Error ? err.message : String(err),
+        });
       }
       return;
     }
@@ -110,10 +133,11 @@ export class App {
 
   private showError(
     errorType: 'location' | 'compass' | 'unknown' | 'no_result',
+    debugContext?: DebugContext,
   ): void {
     this.state = errorType === 'no_result' ? 'NO_RESULT' : 'ERROR';
     this.transition(
-      new ErrorScreen(this.container, errorType, () => this.showLanding()),
+      new ErrorScreen(this.container, errorType, () => this.showLanding(), debugContext),
     );
   }
 
