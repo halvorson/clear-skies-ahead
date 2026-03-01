@@ -49,16 +49,17 @@ else
   echo "→ GITHUB_TOKEN present — gh CLI is authenticated."
 fi
 
-# Firebase auth via service account (GOOGLE_APPLICATION_CREDENTIALS_JSON secret).
-# The secret holds the raw JSON; we write it to a stable file and export the path.
+# Firebase auth via service account.
+# Store the base64-encoded JSON as GOOGLE_APPLICATION_CREDENTIALS_B64 in Claude Code secrets.
+# Encode locally with: base64 -w 0 service-account.json  (macOS: base64 service-account.json)
 SA_KEY_FILE="/tmp/firebase-service-account.json"
-if [ -n "${GOOGLE_APPLICATION_CREDENTIALS_JSON:-}" ]; then
-  echo "${GOOGLE_APPLICATION_CREDENTIALS_JSON}" > "${SA_KEY_FILE}"
+if [ -n "${GOOGLE_APPLICATION_CREDENTIALS_B64:-}" ]; then
+  echo "${GOOGLE_APPLICATION_CREDENTIALS_B64}" | base64 -d > "${SA_KEY_FILE}"
   chmod 600 "${SA_KEY_FILE}"
   echo "GOOGLE_APPLICATION_CREDENTIALS=${SA_KEY_FILE}" >> "${CLAUDE_ENV_FILE}"
   echo "→ Firebase service account written — Firebase CLI is authenticated."
 else
-  echo "⚠  GOOGLE_APPLICATION_CREDENTIALS_JSON not set. Add it to Claude Code secrets to enable Firebase deployments."
+  echo "⚠  GOOGLE_APPLICATION_CREDENTIALS_B64 not set. Add it to Claude Code secrets to enable Firebase deployments."
 fi
 
 # ── Write .env.local for Vite build ─────────────────────────────────────────
