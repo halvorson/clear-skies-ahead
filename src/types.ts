@@ -84,6 +84,13 @@ export class NWSError extends Error {
   }
 }
 
+export class OutOfCoverageError extends Error {
+  constructor() {
+    super('Point is outside NWS coverage area');
+    this.name = 'OutOfCoverageError';
+  }
+}
+
 export class NoResultError extends Error {
   constructor() {
     super('No clear sky found within 1,000 miles');

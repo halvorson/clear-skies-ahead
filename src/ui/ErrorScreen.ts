@@ -49,6 +49,10 @@ function bearingToCardinal(deg: number): string {
   return labels[Math.round(((deg % 360) + 360) % 360 / 22.5) % 16];
 }
 
+function buildDebugText(rows: Array<[string, string]>): string {
+  return rows.map(([k, v]) => `${k}: ${v}`).join('\n');
+}
+
 function buildDebugPanel(
   errorType: PermissionType | 'unknown' | 'no_result',
   ctx: DebugContext | undefined,
@@ -96,6 +100,8 @@ function buildDebugPanel(
 
   rows.push(['Timestamp', new Date().toISOString()]);
 
+  const debugText = buildDebugText(rows);
+
   const tableRows = rows
     .map(([k, v]) => `
       <tr>
@@ -112,6 +118,9 @@ function buildDebugPanel(
       <table style="font-size:12px;border-collapse:collapse;width:100%">
         <tbody>${tableRows}</tbody>
       </table>
+      <button data-debug-text="${escapeHtml(debugText)}" style="margin-top:10px;font-size:11px;padding:4px 10px;border:1px solid rgba(255,255,255,0.4);border-radius:4px;background:rgba(255,255,255,0.1);color:inherit;cursor:pointer">
+        Copy
+      </button>
     </details>
   `;
 }
@@ -154,6 +163,17 @@ export class ErrorScreen {
     if (config.showRetry && onRetry) {
       const btn = this.el.querySelector('.error-retry-btn') as HTMLElement;
       btn.addEventListener('click', onRetry);
+    }
+
+    const copyBtn = this.el.querySelector('[data-debug-text]') as HTMLButtonElement | null;
+    if (copyBtn) {
+      copyBtn.addEventListener('click', () => {
+        const text = copyBtn.dataset.debugText ?? '';
+        navigator.clipboard.writeText(text).then(() => {
+          copyBtn.textContent = 'Copied!';
+          setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
+        });
+      });
     }
   }
 

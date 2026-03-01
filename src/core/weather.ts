@@ -1,5 +1,5 @@
 import type { LatLng } from '../types';
-import { NWSError } from '../types';
+import { NWSError, OutOfCoverageError } from '../types';
 
 const BASE_URL = 'https://api.weather.gov';
 const USER_AGENT = '(clear-skies-ahead, contact@clear-skies-ahead.app)';
@@ -22,6 +22,9 @@ export async function getSkyCover(point: LatLng): Promise<number> {
 
   // Step 1: GET /points/{lat},{lon}
   const pointsRes = await fetchWithRetry(`${BASE_URL}/points/${lat},${lng}`);
+  if (pointsRes.status === 404) {
+    throw new OutOfCoverageError();
+  }
   if (!pointsRes.ok) {
     throw new NWSError(`Points lookup failed: ${pointsRes.status}`);
   }

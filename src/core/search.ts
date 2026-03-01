@@ -1,5 +1,5 @@
 import type { LatLng, SearchPoint, SearchResult } from '../types';
-import { NoResultError } from '../types';
+import { NoResultError, OutOfCoverageError } from '../types';
 import { projectPoint, bearingToCompass, roundToHalfMile } from './geo';
 import { getSkyCover, isClear } from './weather';
 
@@ -13,9 +13,16 @@ export async function runSearch(origin: LatLng, bearingDeg: number): Promise<Sea
   for (let i = 0; i < DISTANCES.length; i++) {
     const distance = DISTANCES[i];
     const coords = projectPoint(origin, bearingDeg, distance);
-    const skyCoverPercent = await getSkyCover(coords);
-    const clear = isClear(skyCoverPercent);
 
+    let skyCoverPercent: number;
+    try {
+      skyCoverPercent = await getSkyCover(coords);
+    } catch (err) {
+      if (err instanceof OutOfCoverageError) break; // Reached beyond NWS bounds — stop here
+      throw;
+    }
+
+    const clear = isClear(skyCoverPercent);
     points.push({ distanceMiles: distance, coords, skyCoverPercent, isClear: clear });
 
     if (clear) {
@@ -35,9 +42,19 @@ export async function runSearch(origin: LatLng, bearingDeg: number): Promise<Sea
   while (high - low > 0.5) {
     const mid = (low + high) / 2;
     const coords = projectPoint(origin, bearingDeg, mid);
-    const skyCoverPercent = await getSkyCover(coords);
-    const clear = isClear(skyCoverPercent);
 
+    let skyCoverPercent: number;
+    try {
+      skyCoverPercent = await getSkyCover(coords);
+    } catch (err) {
+      if (err instanceof OutOfCoverageError) {
+        high = mid; // Out of coverage means too far — search closer
+        continue;
+      }
+      throw;
+    }
+
+    const clear = isClear(skyCoverPercent);
     points.push({ distanceMiles: mid, coords, skyCoverPercent, isClear: clear });
 
     if (clear) {
