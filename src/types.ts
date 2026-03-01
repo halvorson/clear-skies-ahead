@@ -17,7 +17,9 @@ export interface SearchPoint {
 
 /** Final result returned by runSearch(). */
 export interface SearchResult {
-  /** Distance to nearest clear sky, rounded to nearest 0.5 miles. */
+  /** True if clear sky was found. False means all checked points were cloudy/out-of-coverage. */
+  clearSkyFound: boolean;
+  /** Distance to nearest clear sky, rounded to nearest 0.5 miles. Only meaningful when clearSkyFound is true. */
   nearestClearMiles: number;
   /** Exact bearing used for the search (raw device reading, not rounded). */
   bearingDegrees: number;
@@ -33,6 +35,7 @@ export interface SearchResult {
 /** One entry in the in-session search history list. */
 export interface HistoryEntry {
   compassLabel: string;
+  clearSkyFound: boolean;
   distanceMiles: number;
   /** Date.now() at the moment the search completed. */
   timestamp: number;
@@ -61,7 +64,6 @@ export type AppState =
   | 'REQUESTING_PERMISSIONS'
   | 'SEARCHING'
   | 'RESULT'
-  | 'NO_RESULT'
   | 'ERROR';
 
 // ─── Error types ──────────────────────────────────────────────────────────────
@@ -91,9 +93,3 @@ export class OutOfCoverageError extends Error {
   }
 }
 
-export class NoResultError extends Error {
-  constructor() {
-    super('No clear sky found within 1,000 miles');
-    this.name = 'NoResultError';
-  }
-}

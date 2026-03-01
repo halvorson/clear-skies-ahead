@@ -1,9 +1,9 @@
 import type { LatLng, SearchPoint, SearchResult } from '../types';
-import { NoResultError, OutOfCoverageError } from '../types';
+import { OutOfCoverageError } from '../types';
 import { projectPoint, bearingToCompass, roundToHalfMile } from './geo';
 import { getSkyCover, isClear } from './weather';
 
-const DISTANCES = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1000];
+const DISTANCES = [0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1000];
 
 export type SearchProgressCallback = (
   distanceMiles: number,
@@ -43,14 +43,23 @@ export async function runSearch(
   }
 
   if (firstClearIndex === -1) {
-    throw new NoResultError();
+    return {
+      clearSkyFound: false,
+      nearestClearMiles: 0,
+      bearingDegrees: bearingDeg,
+      compassLabel: bearingToCompass(bearingDeg),
+      points,
+      apiCallsMade: points.length,
+    };
   }
 
-  // Phase 2 — Binary narrowing
+  // Phase 2 — Binary narrowing (max 4 halvings, or stop when gap ≤ 1 mile)
   let low = firstClearIndex < 2 ? 0 : DISTANCES[firstClearIndex - 2];
   let high = DISTANCES[firstClearIndex];
+  let halvings = 0;
 
-  while (high - low > 0.5) {
+  while (halvings < 4 && high - low > 1) {
+    halvings++;
     const mid = (low + high) / 2;
     const coords = projectPoint(origin, bearingDeg, mid);
 
@@ -77,6 +86,7 @@ export async function runSearch(
   }
 
   return {
+    clearSkyFound: true,
     nearestClearMiles: roundToHalfMile(high),
     bearingDegrees: bearingDeg,
     compassLabel: bearingToCompass(bearingDeg),

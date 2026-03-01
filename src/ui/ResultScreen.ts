@@ -22,12 +22,18 @@ export class ResultScreen {
     this.el = document.createElement('div');
     this.el.className = 'screen screen--result';
 
-    // Find sky cover at the last clear point
+    const headline = result.clearSkyFound
+      ? `Clear sky is ${result.nearestClearMiles} miles ${result.compassLabel} of you`
+      : `Cloudy forever ${result.compassLabel} of you`;
+
+    // Find sky cover at the last clear point (only relevant when clearSkyFound)
     let skyCoverHtml = '';
-    for (let i = result.points.length - 1; i >= 0; i--) {
-      if (result.points[i].isClear) {
-        skyCoverHtml = `<p class="result-sky-cover">Sky cover: ${result.points[i].skyCoverPercent}% at that location</p>`;
-        break;
+    if (result.clearSkyFound) {
+      for (let i = result.points.length - 1; i >= 0; i--) {
+        if (result.points[i].isClear) {
+          skyCoverHtml = `<p class="result-sky-cover">Sky cover: ${result.points[i].skyCoverPercent}% at that location</p>`;
+          break;
+        }
       }
     }
 
@@ -38,17 +44,18 @@ export class ResultScreen {
 
     const historyHtml = recentHistory.length > 0
       ? `<md-list class="result-history">
-          ${recentHistory.map(entry => `
-            <md-list-item>
-              <span slot="headline">${entry.compassLabel} — ${entry.distanceMiles} miles — ${timeAgo(entry.timestamp)}</span>
-            </md-list-item>
-          `).join('')}
+          ${recentHistory.map(entry => {
+            const label = entry.clearSkyFound
+              ? `${entry.compassLabel} — ${entry.distanceMiles} mi — ${timeAgo(entry.timestamp)}`
+              : `Cloudy forever ${entry.compassLabel} — ${timeAgo(entry.timestamp)}`;
+            return `<md-list-item><span slot="headline">${label}</span></md-list-item>`;
+          }).join('')}
         </md-list>`
       : '';
 
     this.el.innerHTML = `
       <div class="result-content">
-        <p class="result-headline">Clear sky is ${result.nearestClearMiles} miles ${result.compassLabel} of you</p>
+        <p class="result-headline">${headline}</p>
         ${skyCoverHtml}
         <md-filled-button class="result-btn">Point your phone and try a new direction</md-filled-button>
         ${historyHtml}

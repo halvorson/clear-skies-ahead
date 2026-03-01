@@ -7,7 +7,7 @@ interface ErrorConfig {
   showRetry: boolean;
 }
 
-function getErrorConfig(errorType: PermissionType | 'unknown' | 'no_result'): ErrorConfig {
+function getErrorConfig(errorType: PermissionType | 'unknown'): ErrorConfig {
   switch (errorType) {
     case 'location':
       return {
@@ -20,12 +20,6 @@ function getErrorConfig(errorType: PermissionType | 'unknown' | 'no_result'): Er
         heading: 'Compass not available',
         body: 'This app requires compass hardware. It may not be supported on your device or browser.',
         showRetry: false,
-      };
-    case 'no_result':
-      return {
-        heading: 'No clear sky found',
-        body: 'No clear sky within 1,000 miles in that direction. Try pointing in a different direction.',
-        showRetry: true,
       };
     case 'unknown':
       return {
@@ -54,7 +48,7 @@ function buildDebugText(rows: Array<[string, string]>): string {
 }
 
 function buildDebugPanel(
-  errorType: PermissionType | 'unknown' | 'no_result',
+  errorType: PermissionType | 'unknown',
   ctx: DebugContext | undefined,
 ): string {
   const rows: Array<[string, string]> = [];
@@ -138,7 +132,7 @@ export class ErrorScreen {
 
   constructor(
     container: HTMLElement,
-    errorType: PermissionType | 'unknown' | 'no_result',
+    errorType: PermissionType | 'unknown',
     onRetry?: () => void,
     debugContext?: DebugContext,
   ) {

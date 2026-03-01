@@ -17,7 +17,6 @@ import {
 } from '../firebase/analytics';
 import {
   PermissionError,
-  NoResultError,
   type HistoryEntry,
   type SearchResult,
   type AppState,
@@ -116,19 +115,15 @@ export class App {
         (miles, sky, clear) => loading.addProgressEntry(miles, sky, clear),
       );
     } catch (err) {
-      if (err instanceof NoResultError) {
-        logNoResultFound();
-        this.showError('no_result', { coords: debugCoords, bearingDegrees: bearing });
-      } else {
-        this.showError('unknown', {
-          coords: debugCoords,
-          bearingDegrees: bearing,
-          errorMessage: err instanceof Error ? err.message : String(err),
-        });
-      }
+      this.showError('unknown', {
+        coords: debugCoords,
+        bearingDegrees: bearing,
+        errorMessage: err instanceof Error ? err.message : String(err),
+      });
       return;
     }
 
+    if (!result.clearSkyFound) logNoResultFound();
     logSearchComplete(result);
     this.addToHistory(result);
     this.showResult(result);
@@ -144,10 +139,10 @@ export class App {
   }
 
   private showError(
-    errorType: 'location' | 'compass' | 'unknown' | 'no_result',
+    errorType: 'location' | 'compass' | 'unknown',
     debugContext?: DebugContext,
   ): void {
-    this.state = errorType === 'no_result' ? 'NO_RESULT' : 'ERROR';
+    this.state = 'ERROR';
     this.transition(
       new ErrorScreen(this.container, errorType, () => this.showLanding(), debugContext),
     );
@@ -156,6 +151,7 @@ export class App {
   private addToHistory(result: SearchResult): void {
     this.history.unshift({
       compassLabel: result.compassLabel,
+      clearSkyFound: result.clearSkyFound,
       distanceMiles: result.nearestClearMiles,
       timestamp: Date.now(),
     });
