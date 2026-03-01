@@ -16,28 +16,24 @@ type IOSDeviceOrientationEvent = typeof DeviceOrientationEvent & {
 
 // Must be called synchronously within a user gesture on iOS 13+.
 // Call this before any awaits in the gesture handler, then await the result later.
-// Skips the requestPermission() call on subsequent searches — re-invoking it when
-// permission is already granted triggers a re-initialization that emits a spurious
-// deviceorientation event with webkitCompassHeading = 0.
-let iosCompassPermissionGranted = false;
-
 export async function requestIOSCompassPermission(): Promise<void> {
   const Event = DeviceOrientationEvent as unknown as IOSDeviceOrientationEvent;
   if (typeof Event.requestPermission !== 'function') return;
-  if (iosCompassPermissionGranted) return;
   const result = await Event.requestPermission();
   if (result !== 'granted') throw new PermissionError('compass');
-  iosCompassPermissionGranted = true;
 }
 
-// Registers orientation listeners and resolves with the first valid bearing.
-// Call this after requestIOSCompassPermission() has already been awaited.
+// Registers orientation listeners and resolves with a stable bearing.
+// Waits 200 ms before accepting the first reading — the very first
+// deviceorientation event after permission resolves often carries
+// webkitCompassHeading = 0 while the sensor initialises.
 export function waitForCompassReading(): Promise<number> {
   return new Promise((resolve, reject) => {
     let resolved = false;
 
-    const timer = setTimeout(() => {
+    const failTimer = setTimeout(() => {
       if (!resolved) {
+        resolved = true;
         window.removeEventListener('deviceorientationabsolute', onAbsolute);
         window.removeEventListener('deviceorientation', onRelative);
         reject(new PermissionError('compass'));
@@ -47,7 +43,7 @@ export function waitForCompassReading(): Promise<number> {
     function finish(bearing: number) {
       if (resolved) return;
       resolved = true;
-      clearTimeout(timer);
+      clearTimeout(failTimer);
       window.removeEventListener('deviceorientationabsolute', onAbsolute);
       window.removeEventListener('deviceorientation', onRelative);
       resolve(bearing);
@@ -66,7 +62,13 @@ export function waitForCompassReading(): Promise<number> {
       }
     }
 
-    window.addEventListener('deviceorientationabsolute', onAbsolute);
-    window.addEventListener('deviceorientation', onRelative);
+    // Delay attaching listeners so the sensor has time to produce a real
+    // reading. Without this, the first event fires with heading = 0.
+    setTimeout(() => {
+      if (!resolved) {
+        window.addEventListener('deviceorientationabsolute', onAbsolute);
+        window.addEventListener('deviceorientation', onRelative);
+      }
+    }, 200);
   });
 }
