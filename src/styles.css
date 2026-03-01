@@ -80,6 +80,13 @@ body {
   min-width: 220px;
 }
 
+md-filled-button .material-symbols-rounded {
+  display: inline-flex;
+  align-items: center;
+  font-size: 18px;
+  line-height: 1;
+}
+
 /* ── Loading screen ───────────────────────────────────────────── */
 .loading-spinner {
   --md-circular-progress-active-indicator-color: #5db8d4;
