@@ -1,6 +1,4 @@
 import '@material/web/button/filled-button.js';
-import '@material/web/list/list.js';
-import '@material/web/list/list-item.js';
 import type { SearchResult, HistoryEntry } from '../types';
 
 function timeAgo(timestamp: number): string {
@@ -8,6 +6,56 @@ function timeAgo(timestamp: number): string {
   if (diffMin < 1) return 'just now';
   if (diffMin < 60) return `${diffMin} min ago`;
   return `${Math.floor(diffMin / 60)} hr ago`;
+}
+
+function buildResultCard(result: SearchResult): string {
+  if (!result.clearSkyFound) {
+    return `
+      <div class="no-result-card">
+        <p class="no-result-headline">No clear sky within 1,000 miles</p>
+        <p class="no-result-subtext">Try pointing your phone a different way.</p>
+      </div>
+    `;
+  }
+
+  // Rotate the near_me icon (which points NE at 0°) by bearing - 45° to point in the right direction
+  const rotation = result.bearingDegrees - 45;
+
+  return `
+    <div class="result-card">
+      <div class="result-compass" aria-hidden="true">
+        <span class="material-symbols-rounded" style="transform: rotate(${rotation}deg)">near_me</span>
+      </div>
+      <p class="result-headline">${result.nearestClearMiles} miles ${result.compassLabel}</p>
+      <p class="result-subtext">Clear sky is ${result.nearestClearMiles} miles ${result.compassLabel} of you</p>
+    </div>
+  `;
+}
+
+function buildHistorySection(history: HistoryEntry[]): string {
+  if (history.length === 0) return '';
+
+  const entries = history.map(entry => {
+    const iconClass = entry.clearSkyFound ? 'history-icon' : 'history-icon history-icon--no-result';
+    const text = entry.clearSkyFound
+      ? `${entry.compassLabel} — ${entry.distanceMiles} mi`
+      : `${entry.compassLabel} — no clear sky`;
+    return `
+      <div class="history-entry">
+        <span class="material-symbols-rounded ${iconClass}" aria-hidden="true">explore</span>
+        <span class="history-entry-text">${text}</span>
+        <span class="history-entry-time">${timeAgo(entry.timestamp)}</span>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="history-section">
+      <hr class="history-divider" />
+      <span class="history-label">Recent Searches</span>
+      ${entries}
+    </div>
+  `;
 }
 
 export class ResultScreen {
@@ -22,43 +70,22 @@ export class ResultScreen {
     this.el = document.createElement('div');
     this.el.className = 'screen screen--result';
 
-    const headline = result.clearSkyFound
-      ? `Clear sky is ${result.nearestClearMiles} miles ${result.compassLabel} of you`
-      : `Cloudy forever ${result.compassLabel} of you`;
-
-    // Find sky cover at the last clear point (only relevant when clearSkyFound)
-    let skyCoverHtml = '';
-    if (result.clearSkyFound) {
-      for (let i = result.points.length - 1; i >= 0; i--) {
-        if (result.points[i].isClear) {
-          skyCoverHtml = `<p class="result-sky-cover">Sky cover: ${result.points[i].skyCoverPercent}% at that location</p>`;
-          break;
-        }
-      }
-    }
-
-    // History: most recent first, max 10
     const recentHistory = [...history]
       .sort((a, b) => b.timestamp - a.timestamp)
       .slice(0, 10);
 
-    const historyHtml = recentHistory.length > 0
-      ? `<md-list class="result-history">
-          ${recentHistory.map(entry => {
-            const label = entry.clearSkyFound
-              ? `${entry.compassLabel} — ${entry.distanceMiles} mi — ${timeAgo(entry.timestamp)}`
-              : `Cloudy forever ${entry.compassLabel} — ${timeAgo(entry.timestamp)}`;
-            return `<md-list-item><span slot="headline">${label}</span></md-list-item>`;
-          }).join('')}
-        </md-list>`
-      : '';
-
     this.el.innerHTML = `
-      <div class="result-content">
-        <p class="result-headline">${headline}</p>
-        ${skyCoverHtml}
-        <md-filled-button class="result-btn">Point your phone and try a new direction</md-filled-button>
-        ${historyHtml}
+      <div class="screen-header">
+        <span class="material-symbols-rounded screen-icon" aria-hidden="true">wb_sunny</span>
+        <h1 class="app-title">Clear Skies Ahead</h1>
+      </div>
+      <div class="screen-content">
+        ${buildResultCard(result)}
+        <md-filled-button class="cta-fab result-btn" has-icon>
+          <span slot="icon" class="material-symbols-rounded">my_location</span>
+          Try a new direction
+        </md-filled-button>
+        ${buildHistorySection(recentHistory)}
       </div>
     `;
     container.appendChild(this.el);

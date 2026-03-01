@@ -9,10 +9,14 @@ export class LoadingScreen {
     this.el = document.createElement('div');
     this.el.className = 'screen screen--loading';
     this.el.innerHTML = `
-      <div class="loading-content">
-        <md-circular-progress indeterminate></md-circular-progress>
+      <div class="screen-header">
+        <span class="material-symbols-rounded screen-icon" aria-hidden="true">wb_sunny</span>
+        <h1 class="app-title">Clear Skies Ahead</h1>
+      </div>
+      <div class="screen-content">
+        <md-circular-progress indeterminate class="loading-spinner"></md-circular-progress>
         <p class="loading-status"></p>
-        <div class="loading-log" style="margin-top:16px;width:100%;max-height:40vh;overflow-y:auto;text-align:left;font-size:13px;line-height:2;font-family:monospace;opacity:0.85"></div>
+        <div class="loading-log"></div>
       </div>
     `;
     container.appendChild(this.el);
