@@ -20,15 +20,58 @@ Read TASKS.md in the repo root. For every task listed under "Pending Tasks", imp
 
 ## Pending Tasks
 
-### Task 16 — Redesign loading screen for seamless transition from landing/result screens
+### Task 16 — Redesign loading screen to match result screen layout
 `[ ]`
-The loading screen currently uses a two-zone layout (spinner top, scrolling log bottom) that looks visually disconnected from the landing and result screens. Redesign it so the transition feels seamless:
+Redesign the loading screen so the transition from landing → searching → result feels seamless. The key idea: the loading screen should look like the result screen, with a PROGRESS section inserted above the existing RECENT SEARCHES section. When the search finishes, the PROGRESS section disappears and we transition to the result screen normally.
 
-1. **Preserve the card box** — show the same outlined white card that appears on the result screen, occupying the same position. During loading, the card contains the spinner and status text ("Heading X°…") instead of the result. This gives the user a stable visual anchor across all three states.
-2. **Disable the CTA button while loading** — the "Try a new direction" button should be visible but disabled (`disabled` attribute on `<md-filled-button>`) so the layout is stable and the user can't trigger a second search while one is running. Remove it from the loading screen once the search completes (transition to result screen).
-3. **Progress log matches "Recent Searches" section** — the search log (distance check rows) should appear in the same visual slot as the history section on the result screen: below the card, same width, same overline label style ("Searching…" instead of "Recent Searches"), same row height and font. This makes the log feel like a live preview of what will become history.
+**Layout during search (top to bottom):**
+1. Screen header (sun icon + "Clear Skies Ahead" title) — identical to result screen
+2. Card box (same outlined white card as result screen) — contains the CSS spinner + status text ("Heading 252.9° WSW…") instead of a result
+3. Disabled "Try a new direction" button (same FAB, `disabled` attribute so layout stays stable and user can't double-trigger)
+4. **PROGRESS section** — styled exactly like the RECENT SEARCHES section (same `hr` divider, same overline label, same row height and monospace font), but label reads "Searching…" and rows are the live distance-check log
+5. RECENT SEARCHES section — the existing search history, if any, shown below and bumped down by the PROGRESS section
 
-Files likely affected: `src/ui/LoadingScreen.ts`, `src/styles.css`. The result/landing screens should not change structure — only the loading screen adapts to mirror them.
+**After search completes:** transition to result screen as today — the PROGRESS section exists only on the loading screen and is not carried forward.
+
+**Implementation notes:**
+- `LoadingScreen` constructor needs to accept `history: HistoryEntry[]` (can be empty) and render a read-only history section below the progress log. Import `HistoryEntry` from `../types`.
+- The `App.ts` call to `new LoadingScreen(this.container)` must pass `[...this.history]` as the second argument.
+- Remove the separate `loading-top-zone` / `loading-bottom-zone` split; replace with the same `screen-content` flex column used by result screen.
+- The spinner card is a `div.result-card` (reuse that class) containing the `.loading-spinner` div and `.loading-status` paragraph — no extra wrapper class needed.
+- The PROGRESS section HTML structure mirrors the history section: `<div class="history-section"><hr class="history-divider"/><span class="history-label">Searching…</span><div class="loading-log"></div></div>`.
+- The `loading-log` rows use the same font/line-height as today; remove any separate monospace or opacity override that conflicts with the history section style.
+- Remove the `screen--loading` override that set `justify-content: flex-start`; the screen should center normally until content fills it.
+- Keep the spinning sun icon in the header (`.screen-icon--spinning`).
+
+**Files:** `src/ui/LoadingScreen.ts`, `src/ui/App.ts`, `src/styles.css`
+
+---
+
+### Task 17 — Custom result and history entry for out-of-coverage searches
+`[ ]`
+When a search bearing goes over water or into Canada/Mexico, all checked points are outside NWS coverage and return `skyCoverPercent: -1`. Currently these searches fall through to the generic "No clear sky within 1,000 miles" result, which is misleading — the app didn't find clouds, it found no data. Add a distinct third outcome: **out-of-coverage**.
+
+**Part 1 — Detect in `src/core/search.ts`**
+After Phase 1 completes with `firstClearIndex === -1`, check whether every entry in `points[]` has `skyCoverPercent < 0`. If yes, the search ran entirely out of coverage. Set `outOfCoverage: true` in the returned `SearchResult`. If there's a mix of real cloudy readings and out-of-coverage points, keep `outOfCoverage: false` (genuine "no clear sky").
+
+**Part 2 — Add field to types in `src/types.ts`**
+- `SearchResult`: add `outOfCoverage: boolean` (false when clear sky found or when there were real cloudy readings).
+- `HistoryEntry`: add `outOfCoverage: boolean`.
+
+**Part 3 — Custom result card in `src/ui/ResultScreen.ts`**
+In `buildResultCard`, add a third branch before the existing `!result.clearSkyFound` branch:
+```
+if (result.outOfCoverage):
+  headline: "No coverage in this direction"
+  subtext: "NWS doesn't cover the ocean, Canada, or Mexico. Try a different direction."
+  use the same .no-result-card styling
+```
+
+**Part 4 — History entry in `src/ui/App.ts` and `src/ui/ResultScreen.ts`**
+- In `App.addToHistory()`, pass `outOfCoverage: result.outOfCoverage`.
+- In `buildHistorySection`, add a third icon/text case: when `entry.outOfCoverage`, use icon `public_off` (no rotation, since there's no meaningful bearing destination) with text `"${entry.compassLabel} — no coverage"`. Apply a distinct CSS class `history-icon--no-coverage` (can share `history-icon--no-result` color or use a slightly different muted tone).
+
+**Files:** `src/core/search.ts`, `src/types.ts`, `src/ui/ResultScreen.ts`, `src/ui/App.ts`
 
 ---
 
