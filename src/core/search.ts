@@ -33,7 +33,11 @@ export async function runSearch(
     try {
       skyCoverPercent = await getSkyCover(coords);
     } catch (err) {
-      if (err instanceof OutOfCoverageError) break; // Reached beyond NWS bounds — stop here
+      if (err instanceof OutOfCoverageError) {
+        points.push({ distanceMiles: distance, coords, skyCoverPercent: -1, isClear: false });
+        onProgress?.(distance, -1, false);
+        continue; // not break — keep searching
+      }
       throw err;
     }
 

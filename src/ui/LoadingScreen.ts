@@ -56,7 +56,9 @@ export class LoadingScreen {
     const icon = isClear ? '☀' : '☁';
 
     let label: string;
-    if (isClear) {
+    if (skyCoverPercent < 0) {
+      label = 'out of coverage';
+    } else if (isClear) {
       label = 'clear!';
     } else if (!this.hasLoggedEntry) {
       label = `cloudy (${skyCoverPercent}%)`;
