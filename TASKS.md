@@ -47,7 +47,39 @@ Redesign the loading screen so the transition from landing → searching → res
 
 ---
 
-### ✅ Task 17 — Custom result and history entry for out-of-coverage searches
+### Task 18 — Add Vitest unit tests for core logic
+`[ ]`
+Add a focused unit test suite covering `src/core/geo.ts`, `src/core/search.ts`, and `src/core/weather.ts`. These three files contain all the logic-dense code where bugs have actually appeared. Skip the UI layer (`src/ui/`) — DOM-coupled tests have low ROI here.
+
+**Setup**
+- Install `vitest` as a dev dependency: `npm install --save-dev vitest`.
+- Add a `test` script to `package.json`: `"test": "vitest run"`.
+- No `vitest.config.ts` needed — Vitest auto-detects the Vite config.
+- Test files live alongside source in `src/core/`: `geo.test.ts`, `search.test.ts`, `weather.test.ts`.
+
+**`src/core/geo.test.ts`** — pure functions, no mocks needed:
+- `bearingToCompass`: spot-check all 16 labels (0°→N, 22.5°→NNE, 90°→E, 180°→S, 337.5°→NNW, 360°→N). Verify wrap-around.
+- `roundToHalfMile`: 5.0→5.0, 5.24→5.0, 5.25→5.5, 5.74→5.5, 5.75→6.0.
+- `projectPoint`: project 1 mile due north from (0,0) → lat increases by ~0.01449°, lng unchanged. Project 1 mile due east from (0,0) → lng increases by ~0.01449°, lat unchanged. Use `toBeCloseTo` with 3 decimal places.
+
+**`src/core/weather.test.ts`** — mock `fetch` using `vi.stubGlobal`:
+- Returns `OutOfCoverageError` when `/points` returns 404.
+- Returns `OutOfCoverageError` when `/points` returns 200 with missing `gridId` (the Task 11 bug).
+- Returns `NWSError` when `/points` returns 500 after one retry.
+- Correctly picks the most-recent past `validTime` slot from a gridpoints response with multiple entries.
+- Falls back to earliest future entry when all `validTime` slots are in the future.
+- `isClear`: 0%→true, 25%→true, 26%→false, 100%→false.
+
+**`src/core/search.test.ts`** — mock the `weather` module using `vi.mock('../core/weather')` (adjust import path as needed from test file location):
+- All-clear at first distance → `clearSkyFound: true`, `outOfCoverage: false`, `nearestClearMiles` is rounded.
+- All-cloudy through all distances → `clearSkyFound: false`, `outOfCoverage: false`.
+- All-out-of-coverage (`skyCoverPercent: -1` for every point) → `clearSkyFound: false`, `outOfCoverage: true`.
+- Mixed cloudy + out-of-coverage, no clear → `outOfCoverage: false` (not all coverage gaps).
+- `onChecking` fires before each NWS call; `onProgress` fires after with correct values including -1 sentinel.
+- Phase 2 binary narrowing: clear at 64 mi, cloudy at 32 mi → `nearestClearMiles` between 32 and 64, rounded to 0.5.
+
+**Files to create:** `src/core/geo.test.ts`, `src/core/weather.test.ts`, `src/core/search.test.ts`
+**Files to modify:** `package.json` (add `vitest` dep + `test` script)
 `[x]` Added `outOfCoverage: boolean` to `SearchResult` and `HistoryEntry`. `search.ts` sets it true when every point has `skyCoverPercent < 0`. Result card shows "No coverage in this direction" with NWS explanation. History uses `public_off` icon and "— no coverage" text. Files: `src/types.ts`, `src/core/search.ts`, `src/ui/ResultScreen.ts`, `src/ui/App.ts`.
 When a search bearing goes over water or into Canada/Mexico, all checked points are outside NWS coverage and return `skyCoverPercent: -1`. Currently these searches fall through to the generic "No clear sky within 1,000 miles" result, which is misleading — the app didn't find clouds, it found no data. Add a distinct third outcome: **out-of-coverage**.
 
