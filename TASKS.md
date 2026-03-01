@@ -34,34 +34,19 @@ Currently the spinner + status text shift upward as log rows are appended below 
 
 ---
 
-### Task 6 — Newest search-log entry at top, not bottom
-`[ ]`
-On the **LoadingScreen**, `addProgressEntry` currently appends rows to the bottom of `.loading-log`. Prepend instead (`logEl.prepend(row)`) so the most recent check is always visible at the top without scrolling.
-
----
-
-### Task 7 — "cloudy" not "still cloudy" for the first log entry
-`[ ]`
-In `LoadingScreen.addProgressEntry`, the label for a non-clear point says `"still cloudy (X%)"`. The word "still" implies there was something before it. For the very first logged entry (when `.loading-log` has no children yet), show `"cloudy (X%)"` instead of `"still cloudy (X%)"`.
-
----
-
-### Task 8 — Show "…" placeholder row for the in-progress check
-`[ ]`
-After each row is appended (or prepended, after Task 6), immediately insert a `"…"` placeholder row beneath (or above, since order is reversed) it to signal that the next check is coming. Remove that placeholder when the next `addProgressEntry` call arrives. Net effect: there is always one pending `"…"` row visible while the search is running.
-
----
-
-### Task 9 — Two-phase row fill: distance first, then result
-`[ ]`
-Make each search-log entry appear in two steps to increase engagement:
-1. When a check begins, show the row as `"⏳  X mi — checking…"` (dim, italic or reduced opacity).
-2. When the result arrives, update that same row in place to its final state (`"☀  X mi — clear!"` or `"☁  X mi — cloudy (Y%)"`).
-This requires `addProgressEntry` to accept a "start" call and a "resolve" call, or for `runSearch` in `src/core/search.ts` to emit a `checking` event before the NWS call and a `checked` event after. Coordinate the callback signature change across `src/core/search.ts`, `src/ui/App.ts`, and `src/ui/LoadingScreen.ts`.
-
----
-
 ## Completed
+
+### ✅ Task 6 — Newest search-log entry at top, not bottom
+`[x]` Rows are now prepended via `logEl.prepend(row)` in the new `startEntry()` method so the most recent check is always at the top. Changed in `src/ui/LoadingScreen.ts`.
+
+### ✅ Task 7 — "cloudy" not "still cloudy" for the first log entry
+`[x]` Added `hasLoggedEntry` boolean field; `resolveEntry()` uses `"cloudy (X%)"` for the first entry and `"still cloudy (X%)"` for subsequent ones. Changed in `src/ui/LoadingScreen.ts`.
+
+### ✅ Task 8 — Show "..." placeholder row for the in-progress check
+`[x]` Added `placeholderEl` field and `addPlaceholder()`/`clearPlaceholder()`/`finalize()` methods. A dimmed italic "..." row is prepended after each resolved entry and removed when the next entry starts. Changed in `src/ui/LoadingScreen.ts`, `src/ui/App.ts`.
+
+### ✅ Task 9 — Two-phase row fill: distance first, then result
+`[x]` Replaced `addProgressEntry` with `startEntry(miles)` and `resolveEntry(row, sky, clear)`. Added `onChecking` callback to `runSearch()` in `src/core/search.ts`. Updated `App.ts` to wire both callbacks. Files changed: `src/core/search.ts`, `src/ui/LoadingScreen.ts`, `src/ui/App.ts`.
 
 ### ✅ Task 1 — Live compass on most-recent result icon
 `[x]` Added `deviceorientationabsolute`/`deviceorientation` listener in `ResultScreen.ts` that rotates the `.result-compass` icon in real-time. Listener removed in `destroy()`.

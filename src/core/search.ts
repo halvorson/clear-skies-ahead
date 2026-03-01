@@ -11,10 +11,13 @@ export type SearchProgressCallback = (
   isClear: boolean,
 ) => void;
 
+export type SearchCheckingCallback = (distanceMiles: number) => void;
+
 export async function runSearch(
   origin: LatLng,
   bearingDeg: number,
   onProgress?: SearchProgressCallback,
+  onChecking?: SearchCheckingCallback,
 ): Promise<SearchResult> {
   const points: SearchPoint[] = [];
   let firstClearIndex = -1;
@@ -23,6 +26,8 @@ export async function runSearch(
   for (let i = 0; i < DISTANCES.length; i++) {
     const distance = DISTANCES[i];
     const coords = projectPoint(origin, bearingDeg, distance);
+
+    onChecking?.(distance);
 
     let skyCoverPercent: number;
     try {
@@ -62,6 +67,8 @@ export async function runSearch(
     halvings++;
     const mid = (low + high) / 2;
     const coords = projectPoint(origin, bearingDeg, mid);
+
+    onChecking?.(mid);
 
     let skyCoverPercent: number;
     try {
