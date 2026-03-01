@@ -1,14 +1,14 @@
 # Technical Design Document — clear-skies-ahead
 
-**Version:** 1.0  
-**Date:** February 2026  
-**Status:** Draft
+**Version:** 1.0
+**Date:** March 2026
+**Status:** Released
 
 ---
 
 ## 1. Architecture Overview
 
-clear-skies-ahead is a client-heavy PWA with a thin Firebase Functions backend used exclusively as a secure proxy for any future paid APIs. For MVP, the NWS API requires no key, so the Firebase Function layer is minimal but scaffolded and ready.
+clear-skies-ahead is a client-heavy PWA. The browser calls the NWS API directly (no key required). Firebase Functions are scaffolded as a future proxy layer but are not in the critical path for v1.0.
 
 ```
 ┌─────────────────────────────────────┐
@@ -26,7 +26,7 @@ clear-skies-ahead is a client-heavy PWA with a thin Firebase Functions backend u
    ┌──────▼──────┐            ┌─────────▼────────┐
    │  Firebase   │            │   NWS API        │
    │  Functions  │            │  api.weather.gov │
-   │  (proxy)    │            │  (direct, no key)│
+   │  (scaffold) │            │  (direct, no key)│
    └──────┬──────┘            └──────────────────┘
           │
    ┌──────▼──────┐
@@ -35,17 +35,16 @@ clear-skies-ahead is a client-heavy PWA with a thin Firebase Functions backend u
    └─────────────┘
 ```
 
-**Key decisions:**
-- All search logic runs client-side. The browser calls NWS directly (no key needed). Firebase Functions are scaffolded but not in the critical path for MVP.
-- Firebase Analytics is initialized in the client and fires events directly.
-- No server-side state. History is in-memory in the client.
-
 ---
 
 ## 2. Repository Structure
 
 ```
 clear-skies-ahead/
+├── .github/
+│   └── workflows/
+│       ├── deploy-preview.yml      # Auto-deploys to preview channel on push to main
+│       └── deploy-production.yml   # Auto-deploys to production on GitHub release
 ├── docs/
 │   ├── PRD.md
 │   └── TDD.md
@@ -54,33 +53,30 @@ clear-skies-ahead/
 │   ├── manifest.json
 │   └── icons/
 ├── src/
-│   ├── main.ts               # App entry point
+│   ├── main.ts                     # App entry point
+│   ├── styles.css                  # Global MD3 styles and design tokens
+│   ├── types.ts                    # Shared TypeScript interfaces and error classes
 │   ├── ui/
-│   │   ├── App.ts            # Root UI controller
+│   │   ├── App.ts                  # Root controller — state machine, history
 │   │   ├── LandingScreen.ts
 │   │   ├── LoadingScreen.ts
 │   │   ├── ResultScreen.ts
 │   │   └── ErrorScreen.ts
 │   ├── core/
-│   │   ├── permissions.ts    # Geolocation + DeviceOrientation
-│   │   ├── search.ts         # Exponential backoff + binary search
-│   │   ├── geo.ts            # Haversine, bearing projection, compass label
-│   │   └── weather.ts        # NWS API client
-│   ├── firebase/
-│   │   ├── analytics.ts      # Typed analytics event wrappers
-│   │   └── config.ts         # Firebase app init
-│   └── types.ts              # Shared TypeScript interfaces
+│   │   ├── permissions.ts          # Geolocation + DeviceOrientation
+│   │   ├── search.ts               # Exponential expansion + binary narrowing
+│   │   ├── geo.ts                  # Haversine projection, compass labels, rounding
+│   │   └── weather.ts              # NWS API client
+│   └── firebase/
+│       ├── analytics.ts            # Typed analytics event wrappers
+│       └── config.ts               # Firebase app init
 ├── functions/
-│   ├── src/
-│   │   └── index.ts          # Firebase Functions (proxy scaffold)
-│   └── package.json
+│   └── src/index.ts                # Firebase Functions proxy scaffold (unused in v1.0)
+├── TASKS.md                        # Development task board
 ├── firebase.json
-├── .firebaserc
-├── firestore.rules           # Not used in MVP but scaffolded
 ├── package.json
 ├── tsconfig.json
-├── vite.config.ts
-└── README.md
+└── vite.config.ts
 ```
 
 ---
@@ -89,348 +85,364 @@ clear-skies-ahead/
 
 | Layer | Choice | Reason |
 |---|---|---|
-| Language | TypeScript | Type safety, better IDE support |
+| Language | TypeScript | Type safety across all modules |
 | Bundler | Vite | Fast dev server, first-class TS support |
-| UI framework | Vanilla TS + MWC (Material Web Components) | No framework overhead; MD3 components available as web components via `@material/web` |
-| CSS | MD3 design tokens + custom properties | Consistent theming, system dark mode support |
-| Weather API | NOAA / NWS `api.weather.gov` | Free, no API key, authoritative US data |
-| Backend | Firebase Functions (Node 20) | Secure proxy layer; free tier sufficient |
-| Analytics | Firebase Analytics | Already in stack; free |
-| Hosting | Firebase Hosting | Zero-config CDN, HTTPS required for DeviceOrientation |
-| PWA | Vite PWA plugin (`vite-plugin-pwa`) | Service worker + manifest generation |
+| UI | Vanilla TS + Material Web Components | No framework overhead; MD3 components via `@material/web` |
+| CSS | MD3 design tokens + custom properties | Consistent theming |
+| Weather API | NOAA/NWS `api.weather.gov` | Free, no API key, authoritative US data |
+| Backend | Firebase Functions (Node 20) | Proxy scaffold for future paid API |
+| Analytics | Firebase Analytics | Free tier, already in stack |
+| Hosting | Firebase Hosting | HTTPS required for DeviceOrientation |
+| PWA | `vite-plugin-pwa` | Service worker + manifest |
 
 ---
 
 ## 4. Core Modules
 
-### 4.1 `geo.ts` — Geometry Utilities
-
-**`projectPoint(origin: LatLng, bearingDeg: number, distanceMiles: number): LatLng`**
-- Uses the haversine forward projection formula to compute a destination coordinate given a starting point, exact bearing in degrees, and distance in miles
-- Input bearing is the raw device reading (e.g., 284.7°), not rounded
-
-**`bearingToCompass(bearingDeg: number): string`**
-- Maps a 0–360° bearing to one of 16 compass labels: N, NNE, NE, ENE, E, ESE, SE, SSE, S, SSW, SW, WSW, W, WNW, NW, NNW
-- Each label covers a 22.5° arc; label assignment is `Math.round(bearing / 22.5) % 16`
-
-**`roundToHalfMile(miles: number): number`**
-- Returns the nearest 0.5 increment: `Math.round(miles * 2) / 2`
-
----
-
-### 4.2 `weather.ts` — NWS API Client
-
-The NWS API has a two-step lookup for a given coordinate:
-
-**Step 1:** `GET https://api.weather.gov/points/{lat},{lon}`
-- Returns metadata including the forecast office and grid coordinates for the point
-
-**Step 2:** `GET https://api.weather.gov/gridpoints/{office}/{gridX},{gridY}/forecast/hourly`
-- Returns hourly forecast including `shortForecast` and `windSpeed`; we parse sky cover from the nearest hour
-
-**Sky cover parsing:**
-NWS does not return a raw okta value in the hourly forecast endpoint. Instead, we use the `/gridpoints/{office}/{gridX},{gridY}` endpoint which returns `skyCover` as a percentage array over time. We take the nearest time slice.
-
-**`isClear(skyCoverPercent: number): boolean`**
-- Returns `true` if `skyCoverPercent <= 25`
-- This corresponds to NWS SKC/CLR/FEW classifications
-
-**`getSkyCover(point: LatLng): Promise<number>`**
-- Calls NWS points → gridpoints in sequence
-- Returns sky cover percentage (0–100) for the current hour
-- Throws `NWSError` on network failure, non-200 response, or parse failure
-- Each call should include a `User-Agent` header per NWS API requirements: `User-Agent: (clear-skies-ahead, contact@yourdomain.com)`
-
-**Rate limiting considerations:**
-- NWS asks that clients be respectful; no formal rate limit published but they may throttle aggressive callers
-- Our exponential search makes at most ~11 calls in Phase 1 + ~4 in Phase 2 = ~15 NWS calls per search, which is well within reasonable use
-
----
-
-### 4.3 `search.ts` — Search Engine
+### 4.1 `types.ts` — Shared Types
 
 ```typescript
+interface LatLng { lat: number; lng: number; }
+
 interface SearchPoint {
   distanceMiles: number;
   coords: LatLng;
-  skyCoverPercent: number;
+  skyCoverPercent: number;  // -1 = out of NWS coverage
   isClear: boolean;
 }
 
 interface SearchResult {
-  nearestClearMiles: number;        // rounded to 0.5
-  bearingDegrees: number;           // exact, for future use
-  compassLabel: string;             // e.g. "NNW"
-  points: SearchPoint[];            // all points checked (for future map feature)
+  clearSkyFound: boolean;
+  outOfCoverage: boolean;       // true when every point had skyCoverPercent < 0
+  nearestClearMiles: number;    // rounded to nearest 0.5; only meaningful when clearSkyFound
+  bearingDegrees: number;
+  compassLabel: string;         // e.g. "NNW"
+  points: SearchPoint[];        // all checked points — scaffolding for future map feature
   apiCallsMade: number;
 }
-```
 
-**`runSearch(origin: LatLng, bearingDeg: number): Promise<SearchResult>`**
+interface HistoryEntry {
+  compassLabel: string;
+  clearSkyFound: boolean;
+  outOfCoverage: boolean;
+  distanceMiles: number;
+  bearingDegrees: number;
+  timestamp: number;
+}
 
-Phase 1 — Exponential expansion:
-```
-distances = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1000]
-for each distance:
-  check weather at projectPoint(origin, bearing, distance)
-  if clear → break, record firstClearIndex
-if no clear found → throw NoResultError
-```
+interface DebugContext {
+  coords?: { latitude, longitude, accuracy, altitude, altitudeAccuracy };
+  bearingDegrees?: number;
+  errorMessage?: string;
+}
 
-Phase 2 — Binary narrowing:
+class PermissionError extends Error { permissionType: 'location' | 'compass'; }
+class NWSError extends Error {}
+class OutOfCoverageError extends Error {}
 ```
-low = distances[firstClearIndex - 2]  (or 0 if firstClearIndex < 2)
-high = distances[firstClearIndex]
-while (high - low) > 0.5:
-  mid = (low + high) / 2
-  if isClear(mid) → high = mid
-  else → low = mid
-result = roundToHalfMile(high)
-```
-
-All checked points (with coords, sky cover, and clear status) are collected into the `points` array on the result object for use by the future map feature.
 
 ---
 
-### 4.4 `permissions.ts` — Device Permissions
+### 4.2 `geo.ts` — Geometry Utilities
+
+**`projectPoint(origin, bearingDeg, distanceMiles): LatLng`**
+- Haversine forward projection: given a starting coordinate, bearing in degrees, and distance in miles, returns the destination coordinate
+- Raw device bearing (e.g. 284.7°) used directly; no rounding
+
+**`bearingToCompass(bearingDeg): string`**
+- Maps 0–360° to one of 16 labels: N, NNE, NE, ENE, E, ESE, SE, SSE, S, SSW, SW, WSW, W, WNW, NW, NNW
+- `Math.round(((deg % 360) + 360) % 360 / 22.5) % 16`
+
+**`roundToHalfMile(miles): number`**
+- `Math.round(miles * 2) / 2`
+
+---
+
+### 4.3 `weather.ts` — NWS API Client
+
+Two-step lookup per point:
+
+**Step 1:** `GET https://api.weather.gov/points/{lat},{lon}`
+- Returns grid office and coordinates for the point
+- **404** → throw `OutOfCoverageError` (point is outside NWS coverage area)
+- **200 with missing `gridId`** → throw `OutOfCoverageError` (NWS coverage gap)
+- **5xx** → retry once after 1 second; if still failing → throw `NWSError`
+
+**Step 2:** `GET https://api.weather.gov/gridpoints/{gridId}/{gridX},{gridY}`
+- Returns `skyCover` as a `{ validTime, value }[]` array
+- Find the entry whose `validTime` start (ISO 8601 interval) is the most recent past timestamp
+- If all entries are in the future, use the earliest one
+- Returns sky cover as a 0–100 percentage
+
+**`isClear(skyCoverPercent): boolean`**
+- `skyCoverPercent <= 25` — corresponds to NWS SKC/CLR/FEW
+
+All requests include `User-Agent: (clear-skies-ahead, contact@clear-skies-ahead.app)` — NWS blocks requests without one.
+
+---
+
+### 4.4 `search.ts` — Search Engine
+
+```typescript
+type SearchProgressCallback = (distanceMiles, skyCoverPercent, isClear) => void;
+type SearchCheckingCallback = (distanceMiles) => void;
+type SearchPhaseCallback = (phase: 'exponential' | 'binary') => void;
+
+async function runSearch(
+  origin: LatLng,
+  bearingDeg: number,
+  onProgress?: SearchProgressCallback,  // fires after each NWS call returns
+  onChecking?: SearchCheckingCallback,  // fires before each NWS call
+  onPhaseChange?: SearchPhaseCallback,  // fires at start of each phase
+): Promise<SearchResult>
+```
+
+**Phase 1 — Exponential expansion:**
+```
+DISTANCES = [0, 8, 16, 32, 64, 128, 256, 512, 1000]
+
+onPhaseChange('exponential')
+for each distance in DISTANCES:
+  onChecking(distance)
+  try:
+    skyCover = await getSkyCover(projectPoint(origin, bearing, distance))
+  catch OutOfCoverageError:
+    record point with skyCoverPercent: -1
+    onProgress(distance, -1, false)
+    continue          ← skip, don't break — keep searching outward
+  record point
+  onProgress(distance, skyCover, isClear)
+  if isClear → firstClearIndex = i; break
+
+if firstClearIndex === -1:
+  outOfCoverage = all points have skyCoverPercent < 0
+  return { clearSkyFound: false, outOfCoverage, ... }
+```
+
+**Phase 2 — Binary narrowing:**
+```
+onPhaseChange('binary')
+low = firstClearIndex < 2 ? 0 : DISTANCES[firstClearIndex - 2]
+high = DISTANCES[firstClearIndex]
+halvings = 0
+
+while halvings < 4 AND (high - low) > 1:
+  halvings++
+  mid = (low + high) / 2
+  onChecking(mid)
+  try:
+    skyCover = await getSkyCover(...)
+  catch OutOfCoverageError:
+    high = mid    ← treat as "too far", search closer
+    continue
+  onProgress(mid, skyCover, isClear)
+  if isClear → high = mid
+  else → low = mid
+
+return { clearSkyFound: true, nearestClearMiles: roundToHalfMile(high), ... }
+```
+
+---
+
+### 4.5 `permissions.ts` — Device Permissions
 
 **`requestGeolocation(): Promise<GeolocationCoordinates>`**
-- Wraps `navigator.geolocation.getCurrentPosition` in a Promise
-- Uses `{ enableHighAccuracy: true, timeout: 10000 }`
+- `navigator.geolocation.getCurrentPosition` with `{ enableHighAccuracy: true, timeout: 10000 }`
 - On error → throws `PermissionError('location')`
 
-**`requestCompass(): Promise<number>`**
-- On iOS: calls `DeviceOrientationEvent.requestPermission()` first (requires user gesture context)
-- Listens for `deviceorientationabsolute` event (falls back to `deviceorientation` with `webkitCompassHeading` for iOS)
-- Resolves with bearing in degrees (0–360, 0 = North) on first valid reading
-- If event never fires or `absolute` is false and no webkit fallback → throws `PermissionError('compass')`
+**`requestIOSCompassPermission(): Promise<void>`**
+- Called synchronously within the user gesture (before any `await`) to satisfy iOS 13+ requirement
+- Calls `DeviceOrientationEvent.requestPermission()` if available; resolves immediately on non-iOS
+
+**`waitForCompassReading(): Promise<number>`**
+- Listens for `deviceorientationabsolute` (falls back to `deviceorientation` with `webkitCompassHeading`)
+- Resolves with bearing in degrees (0 = North) on first valid reading
 - Timeout after 5 seconds → throws `PermissionError('compass')`
 
 ---
 
-### 4.5 `analytics.ts` — Firebase Analytics
-
-Typed wrappers around `logEvent`:
+### 4.6 `analytics.ts` — Firebase Analytics
 
 ```typescript
 logSearchStarted(): void
 logPermissionDenied(permissionType: 'location' | 'compass'): void
-logSearchComplete(result: SearchResult): void   // logs miles, bearing degrees, compass label, api calls
+logSearchComplete(result: SearchResult): void
 logNoResultFound(): void
 ```
 
-No PII. No coordinates logged.
+No PII. No coordinates.
 
 ---
 
-## 5. UI Screens & Flow
-
-### State machine
+## 5. UI Screens & State Machine
 
 ```
-LANDING → (tap CTA) → REQUESTING_PERMISSIONS
-  → (denied) → ERROR
-  → (granted) → SEARCHING
-    → (no result) → NO_RESULT
-    → (result) → RESULT
-      → (tap CTA again) → SEARCHING  (permissions already held)
+LANDING
+  → (tap CTA) → REQUESTING_PERMISSIONS
+    → (denied) → ERROR
+    → (granted) → SEARCHING
+      → (error) → ERROR
+      → (complete) → RESULT
+        → (tap CTA) → SEARCHING  (permissions already held)
 ```
 
-### Screen specs
+All screens share the same base layout: top-anchored flex column (`justify-content: flex-start`), `screen-header` (sun icon + title), then `screen-content` (card + button + history).
 
-**LandingScreen**
-- App name + tagline at top
-- 2–3 sentence description of what the app does
-- Sticky "Find Clear Sky" MD3 filled button at bottom, full width on mobile
-- MD3 `Surface` background; uses system color scheme (light/dark)
+### LandingScreen
 
-**LoadingScreen**
-- MD3 `CircularProgress` centered
-- Status text below: "Getting your location…" → "Reading compass…" → "Searching for clear sky…" — updated as each phase completes
+- Header: sun icon + "Clear Skies Ahead" title
+- Card (`result-card`): app tagline
+- CTA button: "Find Clear Sky"
 
-**ResultScreen**
-- Large result sentence: *"Clear sky is 5.5 miles NNW of you"* — MD3 `Display Small` typography
-- Secondary line: sky cover % at the result point (e.g., *"Sky cover: 12% at that location"*)
-- MD3 filled button: **"Point your phone and try a new direction"**
-- History list below (MD3 `List`): last 10 searches, each showing compass label, distance, time ago
+### LoadingScreen
 
-**ErrorScreen**
-- MD3 `Icon` (error) + heading + explanation
-- For location denial: instructions to re-enable in browser settings
-- For compass incompatibility: *"This app requires compass hardware. It may not be supported on your device or browser."*
+Constructor: `(container: HTMLElement, history: HistoryEntry[])`
 
-**NoResultScreen**
-- Friendly message: *"No clear sky found within 1,000 miles in that direction. Try pointing in a different direction."*
-- CTA to try again
+- Header: spinning sun icon + title
+- Card (`result-card`): CSS spinner + status text (updated as permissions are acquired and search proceeds)
+- Disabled CTA button: prevents double-tap, keeps layout stable
+- PROGRESS section (`history-section` styled): live search log, newest entry on top
+  - `startEntry(miles)` — prepends an in-progress row before the NWS call
+  - `resolveEntry(row, skyCover, isClear)` — fills in the result when the call returns
+  - `addPhaseLabel(text)` — prepends a small-caps separator label between phases
+- RECENT SEARCHES section: read-only snapshot of history passed at construction
+
+### ResultScreen
+
+Constructor: `(container, result: SearchResult, history: HistoryEntry[], onCtaTap)`
+
+Three card states:
+1. **Clear sky found** — `result-card` with live compass arrow (`near_me` icon, rotates via `deviceorientation` listener: `(resultBearing - heading + 360) % 360 - 45`), headline: *"Sky is clear X miles NNW of you"*
+2. **No clear sky** — `no-result-card`, headline: *"No clear sky within 1,000 miles [compassLabel]"*, subtext: *"Try scanning a different direction."*
+3. **Out of coverage** — `no-result-card`, headline: *"No coverage in this direction"*, subtext with farthest checked distance
+
+History icons: `navigation` icon per entry, rotated live by `(bearing - heading + 360) % 360` to always point in the stored bearing's direction.
+
+Orientation listener is added in constructor and removed in `destroy()`.
+
+### ErrorScreen
+
+Constructor: `(container, errorType, onRetry, debugContext?, history: HistoryEntry[])`
+
+- Card (`no-result-card`): error heading + explanation
+- CTA button: "Start over" → calls `onRetry` (returns to landing)
+- RECENT SEARCHES section: history snapshot
+- Debug panel (`<details>` — collapsed by default, preproduction only): coordinates, bearing, user agent, DeviceOrientation support, error type, error message, timestamp. Includes a Copy button that writes plain-text to clipboard.
+
+`isPreproduction()`: `import.meta.env.DEV || import.meta.env.VITE_APP_ENV === 'preproduction'`
 
 ---
 
-## 6. Firebase Setup
+## 6. Design Tokens (src/styles.css)
 
-### 6.1 Project initialization
-
-```bash
-npm install -g firebase-tools
-firebase login
-firebase init
-# Select: Hosting, Functions, Analytics (via project settings)
+```css
+--md-sys-color-primary: #b8c232          /* yellow-green */
+--md-sys-color-on-primary: #1c1c00
+--md-sys-color-secondary: #5db8d4        /* sky blue */
+--md-sys-color-on-secondary: #ffffff
 ```
 
-### 6.2 Firebase config
+Key values:
+- Background: `#fafcff`
+- Text primary: `#1b1c1e`
+- Text secondary: `#44474e`
+- CSS spinner: `border: 4px solid rgba(93,184,212,0.25); border-top-color: #5db8d4; animation: css-spin 0.8s linear infinite`
+- Sun spin: `animation: spin 6s linear infinite`
 
-Store Firebase config in environment variables, not hardcoded. Vite exposes `VITE_` prefixed env vars to the client:
+---
+
+## 7. Firebase & Hosting
+
+### Environment variables
+
+All Firebase config via `VITE_` prefixed env vars in `.env.local` (gitignored):
 
 ```
-# .env.local (gitignored)
-VITE_FIREBASE_API_KEY=...
-VITE_FIREBASE_AUTH_DOMAIN=...
-VITE_FIREBASE_PROJECT_ID=...
-VITE_FIREBASE_MEASUREMENT_ID=...
+VITE_FIREBASE_API_KEY
+VITE_FIREBASE_AUTH_DOMAIN
+VITE_FIREBASE_PROJECT_ID
+VITE_FIREBASE_STORAGE_BUCKET
+VITE_FIREBASE_MESSAGING_SENDER_ID
+VITE_FIREBASE_APP_ID
+VITE_FIREBASE_MEASUREMENT_ID
 ```
 
-`src/firebase/config.ts` reads these via `import.meta.env.VITE_*`.
+### firebase.json
 
-### 6.3 Firebase Functions (proxy scaffold)
-
-For MVP the function is a no-op placeholder, but structured to accept a `{lat, lon}` query and proxy to a weather API. This is where a paid API key (e.g., Tomorrow.io) would be injected via `functions.config()` in a future version.
-
-```typescript
-// functions/src/index.ts
-export const getWeather = onRequest(async (req, res) => {
-  // MVP: redirect client to call NWS directly
-  // Future: proxy paid API with key stored in Firebase secret manager
-  res.status(501).json({ message: "Not implemented in MVP — call NWS directly" });
-});
-```
-
-### 6.4 Firebase Hosting
-
-`firebase.json`:
 ```json
 {
   "hosting": {
     "public": "dist",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [{ "source": "**", "destination": "/index.html" }],
-    "headers": [
-      {
-        "source": "**",
-        "headers": [{ "key": "Permissions-Policy", "value": "geolocation=(*)" }]
-      }
-    ]
+    "headers": [{
+      "source": "**",
+      "headers": [{ "key": "Permissions-Policy", "value": "geolocation=(*)" }]
+    }]
   }
 }
 ```
 
-The `Permissions-Policy` header is required to allow geolocation in PWA/fullscreen context on some browsers.
+The `Permissions-Policy` header allows geolocation in PWA/standalone context on some browsers.
 
 ---
 
-## 7. PWA Configuration
+## 8. CI/CD
 
-`vite.config.ts` uses `vite-plugin-pwa`:
+Two GitHub Actions workflows:
 
-```typescript
-VitePWA({
-  registerType: 'autoUpdate',
-  manifest: {
-    name: 'clear-skies-ahead',
-    short_name: 'Clear Skies',
-    theme_color: '#F4A300',
-    background_color: '#FFFBFE',
-    display: 'standalone',
-    orientation: 'portrait',
-    icons: [
-      { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-      { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
-    ]
-  },
-  workbox: {
-    globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-    runtimeCaching: [] // No API caching in MVP
-  }
-})
-```
+**`.github/workflows/deploy-preview.yml`**
+- Triggers: push to `main`, `workflow_dispatch`
+- Builds with `VITE_APP_ENV=preproduction` (enables debug panels on error screens)
+- Deploys to Firebase Hosting preview channel `dev` via `firebase-tools hosting:channel:deploy dev`
+- Preview URL: `https://clear-skies-ahead--dev-nhdzm47i.web.app`
 
-HTTPS is required for both DeviceOrientationEvent and PWA install. Firebase Hosting provides HTTPS automatically.
+**`.github/workflows/deploy-production.yml`**
+- Triggers: GitHub release published
+- Builds without `VITE_APP_ENV` (production mode, debug panels hidden)
+- Deploys to Firebase Hosting production via `firebase deploy --only hosting`
+
+Both workflows require these GitHub Actions secrets:
+- `VITE_FIREBASE_*` (7 vars) — passed to Vite at build time
+- `GOOGLE_APPLICATION_CREDENTIALS_B64` — base64-encoded Firebase service account JSON, decoded at deploy time
 
 ---
 
-## 8. NWS API Notes
+## 9. NWS API Notes
 
 - Base URL: `https://api.weather.gov`
-- No API key required for public endpoints
-- Required header on all requests: `User-Agent: (clear-skies-ahead, your@email.com)` — NWS will block requests without a User-Agent
-- The points → gridpoints flow adds latency (~2 round trips per point checked). For a search with 15 NWS calls, this is 30 HTTP requests. Each is typically fast (~200–400ms) but total search time could reach 3–6 seconds on slow connections — acceptable per PRD.
-- NWS returns 500s occasionally; implement a single retry with 1 second delay before failing a point
+- Required header: `User-Agent: (clear-skies-ahead, contact@clear-skies-ahead.app)` — NWS blocks requests without one
+- Two HTTP calls per point checked: `GET /points/{lat},{lon}` then `GET /gridpoints/{gridId}/{x},{y}`
+- Phase 1 checks up to 9 distances; Phase 2 up to 4 halvings = ~13 NWS points = ~26 HTTP requests per search
+- NWS returns 500 occasionally — retry once with 1s delay; if still failing, throw `NWSError`
+- Points off-grid (ocean, Canada, Mexico) return either 404 or a 200 with no `gridId` — both throw `OutOfCoverageError`
 
 ---
 
-## 9. Future Technical Considerations
+## 10. Future Technical Considerations
 
-**Map view (F2):** The `SearchResult.points` array already returns all checked coordinates and their sky cover values. The map feature just needs to consume this. No backend changes required.
+**Map view (F2):** `SearchResult.points` already returns every checked coordinate and sky cover value. The frontend just needs to render them on a map. No backend or search changes needed.
 
-**Caching (F3):** Cache key schema: `{bearingBucket: Math.round(bearing / 10) * 10, timestamp: Math.floor(Date.now() / 120000)}`. Store in a `Map<string, SearchResult>` in the client. TTL is implicit via the timestamp bucket.
+**Caching (F3):** Cache key: `{bearingBucket: Math.round(bearing/10)*10, timeBucket: Math.floor(Date.now()/120000)}`. Store in a client-side `Map<string, SearchResult>`. TTL is implicit in the time bucket.
 
-**Non-US support:** Replace the NWS client with a provider-agnostic `WeatherProvider` interface. Add an Open-Meteo implementation. Detect whether coordinates fall within the NWS bounding box (~(-66, 24) to (-125, 50)) and route accordingly.
+**Non-US support:** Introduce a `WeatherProvider` interface. Add an Open-Meteo or Tomorrow.io implementation. Route based on whether coordinates fall within the NWS coverage bounding box.
 
 ---
 
-## 10. Development Setup
+## 11. Development Workflow
 
 ```bash
-# Clone and install
-git clone git@github.com:yourusername/clear-skies-ahead.git
-cd clear-skies-ahead
+# Install
 npm install
+cp .env.example .env.local   # fill in Firebase config
 
-# Set up env vars
-cp .env.example .env.local
-# Fill in Firebase config values from your Firebase console
-```
-
-### 10.1 Deployment Environments
-
-There are two environments, both backed by the same Firebase project (Functions, Analytics):
-
-| Environment | URL | Command | Use for |
-|---|---|---|---|
-| **dev** | `clear-skies-ahead--dev-<hash>.web.app` | `npm run deploy:preview` | All active development and device testing |
-| **production** | `clear-skies-ahead.web.app` (or custom domain) | `npm run deploy:prod` | Stable, releasable builds only |
-
-The `dev` channel is a persistent Firebase Hosting Preview Channel. It provides a real HTTPS URL (required for DeviceOrientationEvent and geolocation on mobile) without touching production. It shares the same Firebase backend as production.
-
-`package.json` scripts:
-
-```json
-"scripts": {
-  "dev": "vite",
-  "build": "vite build",
-  "deploy:preview": "vite build && firebase hosting:channel:deploy dev",
-  "deploy:prod": "vite build && firebase deploy --only hosting"
-}
-```
-
-### 10.2 Typical development workflow
-
-```bash
-# 1. Write code locally — use vite dev server for non-compass UI work
+# Local dev (no compass/GPS)
 npm run dev
 
-# 2. When you need to test compass / geolocation on a real device
+# Device testing (requires HTTPS)
 npm run deploy:preview
-# → Firebase prints the dev URL; open it on your phone
+# → open https://clear-skies-ahead--dev-nhdzm47i.web.app on your phone
 
-# 3. When ready to ship to production
-npm run deploy:prod
-```
-
-**Note:** The `dev` channel URL changes if you delete and recreate it, but stays stable as long as you keep deploying to the same channel name (`dev`). Bookmark it once and it won't change.
-
-### 10.3 First-time preview channel setup
-
-The first time you run `deploy:preview`, Firebase creates the channel automatically. No extra configuration needed. To see all active channels:
-
-```bash
-firebase hosting:channel:list
+# Ship to production
+# → publish a GitHub release; CI handles the deploy
 ```
