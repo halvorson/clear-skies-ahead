@@ -50,11 +50,12 @@ else
 fi
 
 # Firebase CLI picks up FIREBASE_TOKEN automatically for CI auth.
-if [ -z "${FIREBASE_TOKEN:-}" ]; then
-  echo "⚠  FIREBASE_TOKEN not set. Add it to Claude Code secrets to enable Firebase deployments."
-else
-  echo "→ FIREBASE_TOKEN present — Firebase CLI is authenticated."
-fi
+# NOTE: FIREBASE_TOKEN is deprecated — switching to service account (GOOGLE_APPLICATION_CREDENTIALS).
+# if [ -z "${FIREBASE_TOKEN:-}" ]; then
+#   echo "⚠  FIREBASE_TOKEN not set. Add it to Claude Code secrets to enable Firebase deployments."
+# else
+#   echo "→ FIREBASE_TOKEN present — Firebase CLI is authenticated."
+# fi
 
 # ── Write .env.local for Vite build ─────────────────────────────────────────
 # Firebase web config values are injected via Claude Code secrets (VITE_FIREBASE_*).
