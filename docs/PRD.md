@@ -108,6 +108,7 @@ The loading screen mirrors the result screen layout for visual continuity:
 **Clear sky found:**
 - Result card with a live compass arrow (rotates with device heading to always point toward the result)
 - Single headline: *"Sky is clear [X] miles [compass label] of you"*
+- City/state subtext when NWS coverage is available: *"near Portland, OR"*
 - **"Try a new direction"** button re-runs the full flow with the new bearing at the moment of tap (no permission re-request)
 
 **No clear sky within 1,000 miles:**
@@ -122,8 +123,8 @@ The loading screen mirrors the result screen layout for visual continuity:
 
 - Within the current session, maintain a history list of past results below the CTA on both the result and error screens
 - Each history entry shows: a directional arrow icon (rotates live with compass to point toward that search's bearing), compass label, distance or result type, and time ago
-  - Clear result: `navigation` icon (yellow-green) → *"NNW — 5.5 mi"*
-  - No clear sky: `navigation` icon (muted) → *"NNW — no clear sky"*
+  - Clear result: `navigation` icon (yellow-green) → *"NNW — 5.5 mi (8% clouds)"*
+  - No clear sky: `navigation` icon (muted) → *"NNW — no clear sky (1000 mi checked)"*
   - Out of coverage: `navigation` icon (muted) → *"NNW — no coverage (1000 mi)"*
 - History is in-memory only; does not persist across sessions
 - Maximum 10 history entries; oldest drops off when exceeded
@@ -150,7 +151,9 @@ No PII. No coordinates logged.
 | Push to `main` | Build + deploy to Firebase preview channel (`dev`) |
 | Publish GitHub release | Build + deploy to Firebase production |
 
-The preview channel URL is stable and bookmarkable: `https://clear-skies-ahead--dev-nhdzm47i.web.app`. Preview builds set `VITE_APP_ENV=preproduction` to enable the debug panel on error screens.
+The preview channel URL is stable and bookmarkable: `https://clear-skies-ahead--dev-nhdzm47i.web.app`.
+
+The debug panel on error screens is enabled by `import.meta.env.DEV` — it appears in local `npm run dev` builds only, not in preview or production deploys.
 
 ---
 

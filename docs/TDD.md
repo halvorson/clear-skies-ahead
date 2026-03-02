@@ -61,7 +61,8 @@ clear-skies-ahead/
 │   │   ├── LandingScreen.ts
 │   │   ├── LoadingScreen.ts
 │   │   ├── ResultScreen.ts
-│   │   └── ErrorScreen.ts
+│   │   ├── ErrorScreen.ts
+│   │   └── historyHelpers.ts       # Shared timeAgo + buildHistorySection used by all screens
 │   ├── core/
 │   │   ├── permissions.ts          # Geolocation + DeviceOrientation
 │   │   ├── search.ts               # Exponential expansion + binary narrowing
@@ -329,7 +330,7 @@ Constructor: `(container, errorType, onRetry, debugContext?, history: HistoryEnt
 - RECENT SEARCHES section: history snapshot
 - Debug panel (`<details>` — collapsed by default, preproduction only): coordinates, bearing, user agent, DeviceOrientation support, error type, error message, timestamp. Includes a Copy button that writes plain-text to clipboard.
 
-`isPreproduction()`: `import.meta.env.DEV || import.meta.env.VITE_APP_ENV === 'preproduction'`
+`isPreproduction()`: `import.meta.env.DEV` — debug panel is shown only in local dev builds, not in preview or production deploys
 
 ---
 
@@ -377,13 +378,18 @@ VITE_FIREBASE_MEASUREMENT_ID
     "rewrites": [{ "source": "**", "destination": "/index.html" }],
     "headers": [{
       "source": "**",
-      "headers": [{ "key": "Permissions-Policy", "value": "geolocation=(*)" }]
+      "headers": [
+        { "key": "Permissions-Policy", "value": "geolocation=(*)" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+      ]
     }]
   }
 }
 ```
 
-The `Permissions-Policy` header allows geolocation in PWA/standalone context on some browsers.
+`Permissions-Policy` allows geolocation in PWA/standalone context on some browsers. The remaining three are standard defense-in-depth security headers.
 
 ---
 
@@ -393,7 +399,6 @@ Two GitHub Actions workflows:
 
 **`.github/workflows/deploy-preview.yml`**
 - Triggers: push to `main`, `workflow_dispatch`
-- Builds with `VITE_APP_ENV=preproduction` (enables debug panels on error screens)
 - Deploys to Firebase Hosting preview channel `dev` via `firebase-tools hosting:channel:deploy dev`
 - Preview URL: `https://clear-skies-ahead--dev-nhdzm47i.web.app`
 
