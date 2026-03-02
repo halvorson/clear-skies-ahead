@@ -10,8 +10,8 @@ export default defineConfig({
         name: 'Clear Skies Ahead',
         short_name: 'Clear Skies',
         description: "Find clear sky in the direction you're facing.",
-        theme_color: '#F4A300',
-        background_color: '#FFFBFE',
+        theme_color: '#b8c232',
+        background_color: '#fafcff',
         display: 'standalone',
         orientation: 'portrait',
         icons: [

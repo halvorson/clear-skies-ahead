@@ -1,12 +1,6 @@
 import '@material/web/button/filled-button.js';
 import type { SearchResult, HistoryEntry } from '../types';
-
-function timeAgo(timestamp: number): string {
-  const diffMin = Math.floor((Date.now() - timestamp) / 60_000);
-  if (diffMin < 1) return 'just now';
-  if (diffMin < 60) return `${diffMin} min ago`;
-  return `${Math.floor(diffMin / 60)} hr ago`;
-}
+import { buildHistorySection } from './historyHelpers';
 
 function buildResultCard(result: SearchResult): string {
   if (result.outOfCoverage) {
@@ -42,51 +36,6 @@ function buildResultCard(result: SearchResult): string {
   `;
 }
 
-function buildHistorySection(history: HistoryEntry[]): string {
-  if (history.length === 0) return '';
-
-  const entries = history.map(entry => {
-    let iconName: string;
-    let iconClass: string;
-    let text: string;
-    let dataBearing: string;
-
-    if (entry.outOfCoverage) {
-      iconName = 'navigation';
-      iconClass = 'history-icon history-icon--no-result';
-      text = `${entry.compassLabel} — no coverage (${entry.distanceMiles} mi)`;
-      dataBearing = `data-bearing="${entry.bearingDegrees}"`;
-    } else if (entry.clearSkyFound) {
-      iconName = 'navigation';
-      iconClass = 'history-icon';
-      const coverStr = entry.skyCoverPercent !== undefined ? ` (${entry.skyCoverPercent}% clouds)` : '';
-      text = `${entry.compassLabel} — ${entry.distanceMiles} mi${coverStr}`;
-      dataBearing = `data-bearing="${entry.bearingDegrees}"`;
-    } else {
-      iconName = 'navigation';
-      iconClass = 'history-icon history-icon--no-result';
-      text = `${entry.compassLabel} — no clear sky (${entry.distanceMiles} mi checked)`;
-      dataBearing = `data-bearing="${entry.bearingDegrees}"`;
-    }
-
-    return `
-      <div class="history-entry">
-        <span class="material-symbols-rounded ${iconClass}" aria-hidden="true" ${dataBearing}>${iconName}</span>
-        <span class="history-entry-text">${text}</span>
-        <span class="history-entry-time">${timeAgo(entry.timestamp)}</span>
-      </div>
-    `;
-  }).join('');
-
-  return `
-    <div class="history-section">
-      <hr class="history-divider" />
-      <span class="history-label">Recent Searches</span>
-      ${entries}
-    </div>
-  `;
-}
-
 export class ResultScreen {
   private el: HTMLElement;
   private orientationHandler: ((event: DeviceOrientationEvent) => void) | null = null;
@@ -103,10 +52,6 @@ export class ResultScreen {
     this.el = document.createElement('div');
     this.el.className = 'screen screen--result';
 
-    const recentHistory = [...history]
-      .sort((a, b) => b.timestamp - a.timestamp)
-      .slice(0, 10);
-
     this.el.innerHTML = `
       <div class="screen-header">
         <span class="material-symbols-rounded screen-icon" aria-hidden="true">wb_sunny</span>
@@ -118,7 +63,7 @@ export class ResultScreen {
           <span slot="icon" class="material-symbols-rounded">my_location</span>
           Try a new direction
         </md-filled-button>
-        ${buildHistorySection(recentHistory)}
+        ${buildHistorySection(history)}
       </div>
     `;
     container.appendChild(this.el);
