@@ -22,7 +22,7 @@ export class LandingScreen {
           <span slot="icon" class="material-symbols-rounded">my_location</span>
           Find Clear Sky
         </md-filled-button>
-        <p class="app-version">v${__APP_VERSION__}</p>
+        <p class="app-version">v${__APP_VERSION__}${import.meta.env.VITE_APP_ENV === 'preproduction' ? '+' : ''}</p>
       </div>
     `;
     container.appendChild(this.el);

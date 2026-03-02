@@ -1,5 +1,40 @@
 import type { HistoryEntry } from '../types';
 
+export function startHistoryIconCompass(container: HTMLElement): () => void {
+  let activeEvent: string | null = null;
+
+  const handler = (event: DeviceOrientationEvent) => {
+    if (activeEvent === null) {
+      activeEvent = event.type;
+    } else if (event.type !== activeEvent) {
+      return;
+    }
+
+    let heading: number | null = null;
+    if ('webkitCompassHeading' in event && typeof (event as any).webkitCompassHeading === 'number') {
+      heading = (event as any).webkitCompassHeading as number;
+    } else if (event.alpha !== null) {
+      heading = (360 - event.alpha) % 360;
+    }
+
+    if (heading === null) return;
+
+    const icons = container.querySelectorAll('.history-icon') as NodeListOf<HTMLElement>;
+    icons.forEach(icon => {
+      const bearing = parseFloat(icon.dataset.bearing ?? '0');
+      icon.style.transform = `rotate(${(bearing - heading! + 360) % 360}deg)`;
+    });
+  };
+
+  window.addEventListener('deviceorientationabsolute', handler as EventListener);
+  window.addEventListener('deviceorientation', handler as EventListener);
+
+  return () => {
+    window.removeEventListener('deviceorientationabsolute', handler as EventListener);
+    window.removeEventListener('deviceorientation', handler as EventListener);
+  };
+}
+
 export function timeAgo(timestamp: number): string {
   const diffMin = Math.floor((Date.now() - timestamp) / 60_000);
   if (diffMin < 1) return 'just now';
@@ -20,7 +55,7 @@ export function buildHistorySection(history: HistoryEntry[]): string {
 
     if (entry.outOfCoverage) {
       iconClass = 'history-icon history-icon--no-result';
-      text = `${entry.compassLabel} — no coverage (${entry.distanceMiles} mi)`;
+      text = `${entry.compassLabel} — out of coverage at ${entry.distanceMiles} mi`;
     } else if (entry.clearSkyFound) {
       iconClass = 'history-icon';
       const coverStr = entry.skyCoverPercent !== undefined ? ` (${entry.skyCoverPercent}% clouds)` : '';

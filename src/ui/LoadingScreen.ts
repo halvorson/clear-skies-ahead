@@ -1,7 +1,7 @@
 
 import '@material/web/button/filled-button.js';
 import type { HistoryEntry } from '../types';
-import { buildHistorySection } from './historyHelpers';
+import { buildHistorySection, startHistoryIconCompass } from './historyHelpers';
 
 export class LoadingScreen {
   private el: HTMLElement;
@@ -9,6 +9,7 @@ export class LoadingScreen {
   private logEl: HTMLElement;
   private lastLoggedIsClear: boolean | null = null;
   private placeholderEl: HTMLElement | null = null;
+  private stopCompass: (() => void) | null = null;
 
   constructor(container: HTMLElement, history: HistoryEntry[] = []) {
     this.el = document.createElement('div');
@@ -39,6 +40,8 @@ export class LoadingScreen {
 
     this.statusEl = this.el.querySelector('.loading-status') as HTMLElement;
     this.logEl = this.el.querySelector('.loading-log') as HTMLElement;
+
+    this.stopCompass = startHistoryIconCompass(this.el);
   }
 
   setStatus(message: string): void {
@@ -129,6 +132,7 @@ export class LoadingScreen {
   show(): void { this.el.style.display = ''; }
   hide(): void { this.el.style.display = 'none'; }
   destroy(): void {
+    this.stopCompass?.();
     this.clearPlaceholder();
     this.el.remove();
   }

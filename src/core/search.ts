@@ -24,6 +24,7 @@ export async function runSearch(
 ): Promise<SearchResult> {
   const points: SearchPoint[] = [];
   let firstClearIndex = -1;
+  let hitOutOfCoverage = false;
 
   // Phase 1 — Exponential expansion
   onPhaseChange?.('exponential');
@@ -40,7 +41,8 @@ export async function runSearch(
       if (err instanceof OutOfCoverageError) {
         points.push({ distanceMiles: distance, coords, skyCoverPercent: -1, isClear: false });
         onProgress?.(distance, -1, false);
-        continue; // not break — keep searching
+        hitOutOfCoverage = true;
+        break; // further points in this direction will also be OOC
       }
       throw err;
     }
@@ -56,7 +58,7 @@ export async function runSearch(
   }
 
   if (firstClearIndex === -1) {
-    const outOfCoverage = points.length > 0 && points.every(p => p.skyCoverPercent < 0);
+    const outOfCoverage = hitOutOfCoverage;
     return {
       clearSkyFound: false,
       outOfCoverage,

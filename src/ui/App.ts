@@ -176,7 +176,9 @@ export class App {
       outOfCoverage: result.outOfCoverage,
       distanceMiles: result.clearSkyFound
         ? result.nearestClearMiles
-        : Math.max(...result.points.map(p => p.distanceMiles)),
+        : result.outOfCoverage
+          ? Math.min(...result.points.filter(p => p.skyCoverPercent < 0).map(p => p.distanceMiles))
+          : Math.max(...result.points.map(p => p.distanceMiles)),
       bearingDegrees: result.bearingDegrees,
       timestamp: Date.now(),
       skyCoverPercent: resultSkyCover,

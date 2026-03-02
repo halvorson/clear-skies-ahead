@@ -1,14 +1,14 @@
 import '@material/web/button/filled-button.js';
 import type { SearchResult, HistoryEntry } from '../types';
-import { buildHistorySection } from './historyHelpers';
+import { buildHistorySection, startHistoryIconCompass } from './historyHelpers';
 
 function buildResultCard(result: SearchResult): string {
   if (result.outOfCoverage) {
-    const farthest = Math.max(...result.points.map(p => p.distanceMiles));
+    const firstOoc = Math.min(...result.points.filter(p => p.skyCoverPercent < 0).map(p => p.distanceMiles));
     return `
       <div class="no-result-card">
-        <p class="no-result-headline">No coverage in this direction</p>
-        <p class="no-result-subtext">Checked up to ${farthest} miles — NWS doesn't cover the ocean, Canada, or Mexico. Try a different direction.</p>
+        <p class="no-result-headline">Ran out of coverage at ${firstOoc} miles</p>
+        <p class="no-result-subtext">This direction heads over the ocean, into Canada, or into Mexico. Try a different direction.</p>
       </div>
     `;
   }
@@ -40,6 +40,7 @@ export class ResultScreen {
   private el: HTMLElement;
   private orientationHandler: ((event: DeviceOrientationEvent) => void) | null = null;
   private activeOrientationEvent: string | null = null;
+  private stopHistoryCompass: (() => void) | null = null;
   private resultBearing: number;
 
   constructor(
@@ -72,6 +73,7 @@ export class ResultScreen {
     btn.addEventListener('click', onCtaTap);
 
     this.startCompassListener();
+    this.stopHistoryCompass = startHistoryIconCompass(this.el);
   }
 
   private startCompassListener(): void {
@@ -102,14 +104,6 @@ export class ResultScreen {
       if (compassIcon) {
         compassIcon.style.transform = `rotate(${resultRotation}deg)`;
       }
-
-      // Update all history icons (compute rotation per icon based on its stored bearing)
-      const historyIcons = this.el.querySelectorAll('.history-icon') as NodeListOf<HTMLElement>;
-      historyIcons.forEach(icon => {
-        const bearing = parseFloat(icon.dataset.bearing ?? '0');
-        const historyRotation = (bearing - heading + 360) % 360;
-        icon.style.transform = `rotate(${historyRotation}deg)`;
-      });
     };
 
     window.addEventListener('deviceorientationabsolute', this.orientationHandler as EventListener);
@@ -125,6 +119,7 @@ export class ResultScreen {
       window.removeEventListener('deviceorientation', this.orientationHandler as EventListener);
       this.orientationHandler = null;
     }
+    this.stopHistoryCompass?.();
     this.el.remove();
   }
 }
