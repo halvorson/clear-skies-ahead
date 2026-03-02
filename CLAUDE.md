@@ -168,6 +168,8 @@ The `dev` preview channel is a single persistent Firebase Hosting channel. It sh
 
 **Important:** DeviceOrientationEvent (compass) requires HTTPS. `npm run dev` on localhost will not work for compass testing. Always use `deploy:preview` for device testing.
 
+**Git-first workflow:** Always commit and push changes to GitHub before or immediately after deploying. Prefer `git push` over local-only deploys — the source of truth is the GitHub repo, not the local machine. Don't let deploys get ahead of commits.
+
 ---
 
 ## Analytics events
