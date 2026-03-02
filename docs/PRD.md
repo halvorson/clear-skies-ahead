@@ -72,8 +72,7 @@ On CTA tap, the app requests two permissions in sequence:
 Once permissions are granted, the app runs a search along the user's exact compass bearing:
 
 **Phase 1 — Exponential expansion:**
-- Check weather at 0, 8, 16, 32, 64, 128, 256, 512, 1000 miles along the bearing
-- The 0-mile check tests the user's current location
+- Check weather at 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1000 miles along the bearing
 - Stop as soon as a "clear" point is found
 - Points outside NWS coverage (ocean, Canada, Mexico) return a `-1` sentinel and are skipped — the search continues outward
 - If no clear point is found: show result card with *"No clear sky within 1,000 miles [direction]"*
@@ -86,7 +85,7 @@ Once permissions are granted, the app runs a search along the user's exact compa
 - Report the nearest half-mile (rounded to nearest 0.5)
 
 **"Clear sky" definition:**
-- NWS sky cover ≤ 25% (corresponds to SKC, CLR, or FEW classifications)
+- NWS sky cover ≤ 50% (corresponds to SKC, CLR, FEW, or SCT classifications)
 
 **Coordinate generation:**
 - Each point is computed by projecting a GPS coordinate at the given distance and bearing using the haversine forward formula

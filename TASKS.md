@@ -71,7 +71,8 @@ Show the current `package.json` version string (e.g. `v1.0.2`) at the bottom of 
 ---
 
 ### Task 22 — Show cloud cover % on clear-sky history entries
-`[ ]`
+`[x]`
+Added `skyCoverPercent?: number` to `HistoryEntry` in `src/types.ts`; populated in `App.addToHistory()` from last clear point; updated clear-sky branch in `ResultScreen.ts`, `LoadingScreen.ts`, `ErrorScreen.ts` to append `(${entry.skyCoverPercent}% clouds)`.
 Clear-sky history entries currently show e.g. `NNW — 5.5 mi`. Append the sky cover at the result point: `NNW — 5.5 mi (8% clouds)`. Gives users a sense of how clear "clear" actually was.
 
 **Implementation:**
@@ -115,7 +116,7 @@ The NWS `/points/{lat},{lon}` response already includes `relativeLocation.proper
 ---
 
 ### Task 25 — Reconcile docs with current implementation
-`[ ]`
+`[x]` Updated isClear threshold from 25% to 50% (+ added SCT classification) in all three docs, fixed Phase 1 distances from [0,8,16,...] to [1,2,4,8,...] in PRD.md and TDD.md, added .github/workflows/, src/styles.css, and TASKS.md to CLAUDE.md file tree, corrected binary search stopping condition in CLAUDE.md, and updated TDD.md HTTP request count to match 11-distance array.
 Several things in `CLAUDE.md`, `docs/PRD.md`, and `docs/TDD.md` no longer match the actual code after v1.0.x changes. Update the docs to reflect reality so new sessions start with accurate context.
 
 **Known discrepancies:**

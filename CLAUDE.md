@@ -30,6 +30,10 @@ Full technical design: [`docs/TDD.md`](docs/TDD.md)
 
 ```
 clear-skies-ahead/
+├── .github/
+│   └── workflows/
+│       ├── deploy-preview.yml
+│       └── deploy-production.yml
 ├── docs/
 │   ├── PRD.md
 │   └── TDD.md
@@ -39,6 +43,7 @@ clear-skies-ahead/
 │   └── icons/
 ├── src/
 │   ├── main.ts
+│   ├── styles.css
 │   ├── ui/
 │   │   ├── App.ts
 │   │   ├── LandingScreen.ts
@@ -59,6 +64,7 @@ clear-skies-ahead/
 │   │   └── index.ts
 │   └── package.json
 ├── CLAUDE.md          ← you are here
+├── TASKS.md
 ├── firebase.json
 ├── .firebaserc
 ├── package.json
@@ -73,8 +79,8 @@ clear-skies-ahead/
 - **All search logic runs client-side.** The browser calls the NWS API directly — no key needed. Firebase Functions exist as a scaffold for future paid API proxying but are not in the critical path for MVP.
 - **No auth, no accounts.** Fully anonymous. History is in-memory for the session only.
 - **NWS API is US-only.** Non-US users are out of scope for MVP — no error handling for this case yet.
-- **"Clear sky" = ≤25% cloud cover** (NWS SKC, CLR, or FEW classifications).
-- **Search algorithm:** Exponential expansion (1, 2, 4, 8 ... 1000 miles) until clear sky is found, then binary search narrowing to ±0.5 mile precision. Cap at 1000 miles.
+- **"Clear sky" = ≤50% cloud cover** (NWS SKC, CLR, FEW, or SCT classifications).
+- **Search algorithm:** Exponential expansion (1, 2, 4, 8 ... 1000 miles) until clear sky is found, then binary search narrowing (max 4 halvings, stopping when gap ≤ 1 mile). Cap at 1000 miles.
 - **Compass rounding:** Raw device bearing is used for all math. Display rounds to nearest 16-point compass label only at render time.
 - **Result precision:** Nearest 0.5 miles (e.g., 5.5 miles, not 5.48).
 - **`SearchResult.points`** collects every checked coordinate + sky cover value — this is scaffolding for the future map feature (F2 in PRD). Don't remove it.
@@ -89,12 +95,14 @@ Phase 1 — Exponential expansion:
   for each distance:
     project a GPS point at that distance along the exact bearing
     call NWS API to get sky cover %
-    if skyCover <= 25% → clear, break and record firstClearIndex
+    if skyCover <= 50% → clear, break and record firstClearIndex
 
 Phase 2 — Binary narrowing:
   low = distances[firstClearIndex - 2]  (or 0 if index < 2)
   high = distances[firstClearIndex]
-  while (high - low) > 0.5:
+  halvings = 0
+  while halvings < 4 AND (high - low) > 1:
+    halvings++
     mid = (low + high) / 2
     if isClear(mid) → high = mid
     else → low = mid
