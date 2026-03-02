@@ -149,26 +149,24 @@ Read in `src/firebase/config.ts` via `import.meta.env.VITE_*`.
 
 ## Deployment workflow
 
-| Environment | Command | Use for |
+| Environment | How to deploy | Use for |
 |---|---|---|
 | Local dev | `npm run dev` | UI work that doesn't need compass/GPS |
-| Dev preview (HTTPS) | `npm run deploy:preview` | Real device testing — compass + GPS require HTTPS |
-| Production | `npm run deploy:prod` | Stable, releasable builds only |
+| Dev preview (HTTPS) | `git push` to `main` | Real device testing — GitHub Action deploys automatically |
+| Production | Publish a GitHub release | Stable, releasable builds only — GitHub Action deploys automatically |
 
-```json
-"scripts": {
-  "dev": "vite",
-  "build": "vite build",
-  "deploy:preview": "vite build && firebase hosting:channel:deploy dev",
-  "deploy:prod": "vite build && firebase deploy --only hosting"
-}
+**Do not run `npm run deploy:preview` or `npm run deploy:prod` manually.** All Firebase deploys go through GitHub Actions:
+- `.github/workflows/deploy-preview.yml` — triggers on every push to `main`, deploys to the `dev` preview channel
+- `.github/workflows/deploy-production.yml` — triggers on a published GitHub release
+
+To cut a production release:
+```bash
+gh release create v1.x.x --title "v1.x.x" --notes "..."
 ```
 
 The `dev` preview channel is a single persistent Firebase Hosting channel. It shares the same Firebase backend as production. The URL stays stable — bookmark it on your phone once and reuse it.
 
-**Important:** DeviceOrientationEvent (compass) requires HTTPS. `npm run dev` on localhost will not work for compass testing. Always use `deploy:preview` for device testing.
-
-**Git-first workflow:** Always commit and push changes to GitHub before or immediately after deploying. Prefer `git push` over local-only deploys — the source of truth is the GitHub repo, not the local machine. Don't let deploys get ahead of commits.
+**Important:** DeviceOrientationEvent (compass) requires HTTPS. `npm run dev` on localhost will not work for compass testing. Always push to `main` and use the preview URL for device testing.
 
 ---
 
