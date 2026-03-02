@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import pkg from './package.json';
 
 export default defineConfig({
   plugins: [
@@ -26,4 +27,7 @@ export default defineConfig({
     }),
   ],
   build: { target: 'es2020' },
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
 });

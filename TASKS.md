@@ -20,33 +20,6 @@ Read TASKS.md in the repo root. For every task listed under "Pending Tasks", imp
 
 ## Pending Tasks
 
-### Task 16 — Redesign loading screen to match result screen layout
-`[ ]`
-Redesign the loading screen so the transition from landing → searching → result feels seamless. The key idea: the loading screen should look like the result screen, with a PROGRESS section inserted above the existing RECENT SEARCHES section. When the search finishes, the PROGRESS section disappears and we transition to the result screen normally.
-
-**Layout during search (top to bottom):**
-1. Screen header (sun icon + "Clear Skies Ahead" title) — identical to result screen
-2. Card box (same outlined white card as result screen) — contains the CSS spinner + status text ("Heading 252.9° WSW…") instead of a result
-3. Disabled "Try a new direction" button (same FAB, `disabled` attribute so layout stays stable and user can't double-trigger)
-4. **PROGRESS section** — styled exactly like the RECENT SEARCHES section (same `hr` divider, same overline label, same row height and monospace font), but label reads "Searching…" and rows are the live distance-check log
-5. RECENT SEARCHES section — the existing search history, if any, shown below and bumped down by the PROGRESS section
-
-**After search completes:** transition to result screen as today — the PROGRESS section exists only on the loading screen and is not carried forward.
-
-**Implementation notes:**
-- `LoadingScreen` constructor needs to accept `history: HistoryEntry[]` (can be empty) and render a read-only history section below the progress log. Import `HistoryEntry` from `../types`.
-- The `App.ts` call to `new LoadingScreen(this.container)` must pass `[...this.history]` as the second argument.
-- Remove the separate `loading-top-zone` / `loading-bottom-zone` split; replace with the same `screen-content` flex column used by result screen.
-- The spinner card is a `div.result-card` (reuse that class) containing the `.loading-spinner` div and `.loading-status` paragraph — no extra wrapper class needed.
-- The PROGRESS section HTML structure mirrors the history section: `<div class="history-section"><hr class="history-divider"/><span class="history-label">Searching…</span><div class="loading-log"></div></div>`.
-- The `loading-log` rows use the same font/line-height as today; remove any separate monospace or opacity override that conflicts with the history section style.
-- Remove the `screen--loading` override that set `justify-content: flex-start`; the screen should center normally until content fills it.
-- Keep the spinning sun icon in the header (`.screen-icon--spinning`).
-
-**Files:** `src/ui/LoadingScreen.ts`, `src/ui/App.ts`, `src/styles.css`
-
----
-
 ### Task 18 — Add Vitest unit tests for core logic
 `[ ]`
 Add a focused unit test suite covering `src/core/geo.ts`, `src/core/search.ts`, and `src/core/weather.ts`. These three files contain all the logic-dense code where bugs have actually appeared. Skip the UI layer (`src/ui/`) — DOM-coupled tests have low ROI here.
@@ -83,60 +56,94 @@ Add a focused unit test suite covering `src/core/geo.ts`, `src/core/search.ts`, 
 
 ---
 
-### Task 19 — Automated CI/CD via GitHub Actions
-`[ ]`
-Replace the current manual deploy workflow with two automated pipelines:
+### Task 21 — Display app version on landing screen
+`[x]` Added `define: { __APP_VERSION__ }` to `vite.config.ts` using `pkg.version`, declared `__APP_VERSION__` in `src/vite-env.d.ts`, added `<p class="app-version">v${__APP_VERSION__}</p>` to `LandingScreen.ts`, and `.app-version` style to `src/styles.css`.
+Show the current `package.json` version string (e.g. `v1.0.2`) at the bottom of the landing screen. Bake it at build time via Vite's `define` config — bumping the version in `package.json` then automatically updates the displayed version on the next build with no extra step.
 
-**Pipeline 1 — Preview on every push to `main`**
-Re-enable the push trigger in `.github/workflows/deploy-preview.yml`. Every push to `main` should automatically build and deploy to the persistent Firebase Hosting preview channel (`dev`). The preview URL stays stable: `https://clear-skies-ahead--dev-nhdzm47i.web.app`.
+**Implementation:**
+- `vite.config.ts`: import `package.json` and add `define: { __APP_VERSION__: JSON.stringify(pkg.version) }`.
+- `src/vite-env.d.ts` (create if it doesn't exist): add `declare const __APP_VERSION__: string;` so TypeScript knows the global.
+- `src/ui/LandingScreen.ts`: add `<p class="app-version">v${__APP_VERSION__}</p>` below the CTA button inside `screen-content`.
+- `src/styles.css`: add `.app-version { font-size: 11px; opacity: 0.35; text-align: center; padding-top: 12px; }`.
 
-Changes to `.github/workflows/deploy-preview.yml`:
-- Change the `on:` block from `workflow_dispatch` only to:
-  ```yaml
-  on:
-    push:
-      branches: [main]
-    workflow_dispatch:
-  ```
-- Keep `workflow_dispatch` so it can still be triggered manually if needed.
-- No other changes to the job steps — the existing build + credentials + deploy steps are correct.
-
-**Pipeline 2 — Production on GitHub release**
-Create `.github/workflows/deploy-production.yml`. When a release is published on GitHub (`on: release: types: [published]`), build and deploy to Firebase Hosting production (`firebase deploy --only hosting`).
-
-The new file should mirror the structure of `deploy-preview.yml` exactly, with two differences:
-1. The `on:` trigger is `release: types: [published]`.
-2. The deploy step uses `npx firebase-tools@15 deploy --only hosting --project clear-skies-ahead` instead of `hosting:channel:deploy dev`.
-
-All the same secrets (`VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_MEASUREMENT_ID`, `GOOGLE_APPLICATION_CREDENTIALS_B64`) are already configured in the repo and apply to both workflows.
-
-**npm scripts — no change needed.** `npm run deploy:preview` and `npm run deploy:prod` remain as manual escape hatches.
-
-**Files:** `.github/workflows/deploy-preview.yml` (modify), `.github/workflows/deploy-production.yml` (create)
+**Files:** `vite.config.ts`, `src/ui/LandingScreen.ts`, `src/styles.css`, `src/vite-env.d.ts`
 
 ---
 
-### Task 20 — Open Graph meta tags for link previews
-`[x]` Added `<meta name="description">`, full Open Graph block (`og:type`, `og:url`, `og:title`, `og:description`, `og:image`, `og:site_name`), and Twitter/X card tags (`twitter:card`, `twitter:title`, `twitter:description`, `twitter:image`) to `index.html`. Image points to `/icons/icon-512.png` on the production domain. Shipped as v1.0.1 hotfix. File: `index.html`.
+### Task 22 — Show cloud cover % on clear-sky history entries
+`[ ]`
+Clear-sky history entries currently show e.g. `NNW — 5.5 mi`. Append the sky cover at the result point: `NNW — 5.5 mi (8% clouds)`. Gives users a sense of how clear "clear" actually was.
 
-Add Open Graph and Twitter/X Card meta tags to `index.html` so that link previews work correctly when the app URL is shared on iMessage, Slack, X, etc.
+**Implementation:**
+- Add `skyCoverPercent?: number` to `HistoryEntry` in `src/types.ts`.
+- In `App.addToHistory()`, for clear results set it from `result.points.filter(p => p.isClear).at(-1)?.skyCoverPercent` (the last clear point checked — the binary-search winner).
+- Update the clear-sky branch in `ResultScreen.buildHistorySection()`, `LoadingScreen.buildHistorySection()`, and `ErrorScreen.buildHistorySection()` to append `(${entry.skyCoverPercent}% clouds)` when `entry.skyCoverPercent !== undefined`.
 
-**Tags to add (in `<head>`, after existing meta tags):**
-- `<meta name="description">` — plain text description for SEO and fallback
-- `og:type` = `website`
-- `og:url` = `https://clear-skies-ahead.web.app`
-- `og:title` = `Clear Skies Ahead`
-- `og:description` = one-liner describing the app
-- `og:image` = `https://clear-skies-ahead.web.app/icons/icon-512.png`
-- `og:site_name` = `Clear Skies Ahead`
-- `twitter:card` = `summary` (square icon, not landscape)
-- `twitter:title`, `twitter:description`, `twitter:image` — same values as OG
+**Files:** `src/types.ts`, `src/ui/App.ts`, `src/ui/ResultScreen.ts`, `src/ui/LoadingScreen.ts`, `src/ui/ErrorScreen.ts`
 
-**File:** `index.html`
+---
+
+### Task 23 — Show farthest checked distance on no-clear-sky history entries
+`[ ]`
+"No clear sky" (non-coverage) history entries currently show `NNW — no clear sky` with no distance context. Update to: `NNW — no clear sky (1000 mi checked)`.
+
+**Implementation:**
+- In `App.addToHistory()`, change the `distanceMiles` assignment to:
+  ```typescript
+  distanceMiles: result.clearSkyFound
+    ? result.nearestClearMiles
+    : Math.max(...result.points.map(p => p.distanceMiles)),
+  ```
+  This covers both `outOfCoverage` and `!clearSkyFound` with one unified expression (outOfCoverage already used max, but `!clearSkyFound` was incorrectly using `nearestClearMiles` which is `0`).
+- Update the no-clear-sky branch in `ResultScreen.buildHistorySection()`, `LoadingScreen.buildHistorySection()`, and `ErrorScreen.buildHistorySection()` to render `${entry.compassLabel} — no clear sky (${entry.distanceMiles} mi checked)`.
+
+**Files:** `src/ui/App.ts`, `src/ui/ResultScreen.ts`, `src/ui/LoadingScreen.ts`, `src/ui/ErrorScreen.ts`
+
+---
+
+### Task 24 — Add city/state to success card (NWS relativeLocation)
+`[ ]`
+The NWS `/points/{lat},{lon}` response already includes `relativeLocation.properties.city` and `relativeLocation.properties.state` (e.g. `"Portland"`, `"OR"`) — we make this call for every searched point but don't capture those fields. After the binary search resolves, show the nearest city/state as subtext on the result card: *"Sky is clear 5.5 miles NNW of you"* + *"near Portland, OR"*.
+
+**Implementation (preferred — no extra HTTP request):**
+1. In `weather.ts`, extend the `/points` response type to include `relativeLocation: { properties: { city: string; state: string } }`. Change `getSkyCover()` return type from `number` to `{ skyCoverPercent: number; city?: string; state?: string }` (or rename function to `getPointData()`). Update all callers in `search.ts`.
+2. Add `resultLocation?: { city: string; state: string }` to `SearchResult` in `src/types.ts`. Populate from the last Phase 2 point's response in `search.ts`.
+3. In `ResultScreen.buildResultCard()`, add a `<p class="result-subtext">near ${city}, ${state}</p>` below the headline when `result.resultLocation` is present.
+
+**Files:** `src/core/weather.ts`, `src/core/search.ts`, `src/types.ts`, `src/ui/ResultScreen.ts`
+
+---
+
+### Task 25 — Reconcile docs with current implementation
+`[ ]`
+Several things in `CLAUDE.md`, `docs/PRD.md`, and `docs/TDD.md` no longer match the actual code after v1.0.x changes. Update the docs to reflect reality so new sessions start with accurate context.
+
+**Known discrepancies:**
+- **`isClear()` threshold:** All docs say `≤ 25%` but code uses `≤ 50%` (changed intentionally in v1.0.2 "looser cloud cutoff"). Update all three doc files.
+- **Search distances:** `TDD.md` and `PRD.md` show `[0, 8, 16, 32, 64, 128, 256, 512, 1000]` with a 0-mile home check, but code uses `[1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1000]` (no 0-mile check). Update TDD and PRD.
+- **CLAUDE.md file tree:** Missing `src/styles.css`, `TASKS.md`, and `.github/workflows/`. Add them.
+- **CLAUDE.md binary search description:** Says "±0.5 mile precision" but code does max 4 halvings stopping when gap ≤ 1 mile. Correct it.
+- **CLAUDE.md search algorithm block:** Already shows correct distances — just verify it stays in sync after the threshold fix above.
+
+**Files:** `CLAUDE.md`, `docs/PRD.md`, `docs/TDD.md`
+
+---
+
+### Task 26 — Add `npm test` to CI pipeline (depends on Task 18)
+`[ ]`
+Once Vitest tests exist (Task 18), add a `run: npm test` step to both GitHub Actions workflows *before* the build step. A failing test should block any deploy.
+
+**Files:** `.github/workflows/deploy-preview.yml`, `.github/workflows/deploy-production.yml`
 
 ---
 
 ## Completed
+
+### ✅ Task 20 — Open Graph meta tags for link previews
+`[x]` Added `<meta name="description">`, full Open Graph block (`og:type`, `og:url`, `og:title`, `og:description`, `og:image`, `og:site_name`), and Twitter/X card tags (`twitter:card`, `twitter:title`, `twitter:description`, `twitter:image`) to `index.html`. Image points to `/icons/icon-512.png` on the production domain. Shipped as v1.0.1 hotfix. File: `index.html`.
+
+### ✅ Task 16 — Redesign loading screen to match result screen layout
+`[x]` Redesigned `LoadingScreen` to match the result screen layout. Constructor now accepts `history: HistoryEntry[]` and renders a read-only RECENT SEARCHES section below the live PROGRESS log. Spinner lives in a `div.result-card` card; PROGRESS section uses the same `history-section` structure. `App.ts` passes `[...this.history]` on construction. Removed the old two-zone flex split. Files: `src/ui/LoadingScreen.ts`, `src/ui/App.ts`, `src/styles.css`.
 
 ### ✅ Task 19 — Automated CI/CD via GitHub Actions
 `[x]` Re-enabled push trigger on `deploy-preview.yml` (auto-deploys to preview channel on push to `main`). Created `deploy-production.yml` (auto-deploys to production on GitHub release). Both workflows pass all 7 Firebase config vars. Shipped with v1.0.0.
