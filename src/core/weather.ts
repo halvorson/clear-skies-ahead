@@ -100,9 +100,7 @@ export async function getLocationName(coords: LatLng): Promise<{ city: string; s
   try {
     const lat = coords.lat.toFixed(4);
     const lng = coords.lng.toFixed(4);
-    const res = await fetch(`${BASE_URL}/points/${lat},${lng}`, {
-      headers: { 'User-Agent': USER_AGENT },
-    });
+    const res = await fetchWithRetry(`${BASE_URL}/points/${lat},${lng}`);
     if (!res.ok) return null;
     const data = await res.json();
     const city = data?.properties?.relativeLocation?.properties?.city;
