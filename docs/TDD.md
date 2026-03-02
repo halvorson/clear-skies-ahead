@@ -175,7 +175,7 @@ Two-step lookup per point:
 - Returns sky cover as a 0–100 percentage
 
 **`isClear(skyCoverPercent): boolean`**
-- `skyCoverPercent <= 25` — corresponds to NWS SKC/CLR/FEW
+- `skyCoverPercent <= 50` — corresponds to NWS SKC/CLR/FEW/SCT
 
 All requests include `User-Agent: (clear-skies-ahead, contact@clear-skies-ahead.app)` — NWS blocks requests without one.
 
@@ -199,7 +199,7 @@ async function runSearch(
 
 **Phase 1 — Exponential expansion:**
 ```
-DISTANCES = [0, 8, 16, 32, 64, 128, 256, 512, 1000]
+DISTANCES = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1000]
 
 onPhaseChange('exponential')
 for each distance in DISTANCES:
@@ -413,7 +413,7 @@ Both workflows require these GitHub Actions secrets:
 - Base URL: `https://api.weather.gov`
 - Required header: `User-Agent: (clear-skies-ahead, contact@clear-skies-ahead.app)` — NWS blocks requests without one
 - Two HTTP calls per point checked: `GET /points/{lat},{lon}` then `GET /gridpoints/{gridId}/{x},{y}`
-- Phase 1 checks up to 9 distances; Phase 2 up to 4 halvings = ~13 NWS points = ~26 HTTP requests per search
+- Phase 1 checks up to 11 distances; Phase 2 up to 4 halvings = ~15 NWS points = ~30 HTTP requests per search
 - NWS returns 500 occasionally — retry once with 1s delay; if still failing, throw `NWSError`
 - Points off-grid (ocean, Canada, Mexico) return either 404 or a 200 with no `gridId` — both throw `OutOfCoverageError`
 
