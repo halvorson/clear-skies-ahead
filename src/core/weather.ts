@@ -95,3 +95,29 @@ export async function getSkyCover(point: LatLng): Promise<number> {
 export function isClear(skyCoverPercent: number): boolean {
   return skyCoverPercent <= 50;
 }
+
+export async function getLocationName(coords: LatLng): Promise<{ city: string; state: string } | null> {
+  try {
+    const lat = coords.lat.toFixed(4);
+    const lng = coords.lng.toFixed(4);
+
+    const pointsRes = await fetchWithRetry(`${BASE_URL}/points/${lat},${lng}`);
+    if (!pointsRes.ok) return null;
+
+    let pointsData: { properties: { relativeLocation: { properties: { city: string; state: string } } } };
+    try {
+      pointsData = await pointsRes.json();
+    } catch {
+      return null;
+    }
+
+    const city = pointsData?.properties?.relativeLocation?.properties?.city;
+    const state = pointsData?.properties?.relativeLocation?.properties?.state;
+
+    if (!city || !state) return null;
+
+    return { city, state };
+  } catch {
+    return null;
+  }
+}
