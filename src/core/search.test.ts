@@ -43,13 +43,13 @@ describe('runSearch', () => {
     expect(result.outOfCoverage).toBe(true);
   });
 
-  it('returns outOfCoverage:false when points are mixed cloudy and out-of-coverage', async () => {
+  it('returns outOfCoverage:true when search hits OOC even after cloudy points', async () => {
     mockGetSkyCover
-      .mockResolvedValueOnce(100)            // 1mi: cloudy (skyCoverPercent ≥ 0)
-      .mockRejectedValue(new OutOfCoverageError()); // remaining: out-of-coverage
+      .mockResolvedValueOnce(100)            // 1mi: cloudy
+      .mockRejectedValue(new OutOfCoverageError()); // 2mi+: out-of-coverage → break
     const result = await runSearch(ORIGIN, BEARING);
     expect(result.clearSkyFound).toBe(false);
-    expect(result.outOfCoverage).toBe(false); // not ALL points have skyCoverPercent < 0
+    expect(result.outOfCoverage).toBe(true); // OOC hit stops the search
   });
 
   it('fires onChecking before each NWS call and onProgress after with correct values', async () => {
