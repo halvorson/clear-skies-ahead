@@ -1,0 +1,97 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { runSearch } from './search';
+import { getSkyCover, getLocationName } from './weather';
+import { OutOfCoverageError } from '../types';
+
+vi.mock('./weather', () => ({
+  getSkyCover: vi.fn(),
+  isClear: (x: number) => x <= 50,
+  getLocationName: vi.fn(),
+}));
+
+const mockGetSkyCover = vi.mocked(getSkyCover);
+const mockGetLocationName = vi.mocked(getLocationName);
+
+const ORIGIN = { lat: 45.0, lng: -90.0 };
+const BEARING = 90;
+
+beforeEach(() => {
+  vi.resetAllMocks();
+  mockGetLocationName.mockResolvedValue(null);
+});
+
+describe('runSearch', () => {
+  it('returns clearSkyFound:true with rounded distance when clear at first check', async () => {
+    mockGetSkyCover.mockResolvedValue(0); // all clear
+    const result = await runSearch(ORIGIN, BEARING);
+    expect(result.clearSkyFound).toBe(true);
+    expect(result.outOfCoverage).toBe(false);
+    expect(result.nearestClearMiles).toBe(1.0); // roundToHalfMile(1) = 1.0
+  });
+
+  it('returns clearSkyFound:false, outOfCoverage:false when all points are cloudy', async () => {
+    mockGetSkyCover.mockResolvedValue(100);
+    const result = await runSearch(ORIGIN, BEARING);
+    expect(result.clearSkyFound).toBe(false);
+    expect(result.outOfCoverage).toBe(false);
+  });
+
+  it('returns clearSkyFound:false, outOfCoverage:true when all points are out-of-coverage', async () => {
+    mockGetSkyCover.mockRejectedValue(new OutOfCoverageError());
+    const result = await runSearch(ORIGIN, BEARING);
+    expect(result.clearSkyFound).toBe(false);
+    expect(result.outOfCoverage).toBe(true);
+  });
+
+  it('returns outOfCoverage:false when points are mixed cloudy and out-of-coverage', async () => {
+    mockGetSkyCover
+      .mockResolvedValueOnce(100)            // 1mi: cloudy (skyCoverPercent ≥ 0)
+      .mockRejectedValue(new OutOfCoverageError()); // remaining: out-of-coverage
+    const result = await runSearch(ORIGIN, BEARING);
+    expect(result.clearSkyFound).toBe(false);
+    expect(result.outOfCoverage).toBe(false); // not ALL points have skyCoverPercent < 0
+  });
+
+  it('fires onChecking before each NWS call and onProgress after with correct values', async () => {
+    mockGetSkyCover.mockResolvedValue(100); // all cloudy → 11 Phase 1 calls, no Phase 2
+    const onChecking = vi.fn();
+    const onProgress = vi.fn();
+
+    await runSearch(ORIGIN, BEARING, onProgress, onChecking);
+
+    expect(onChecking).toHaveBeenCalledTimes(11);
+    expect(onProgress).toHaveBeenCalledTimes(11);
+    expect(onChecking).toHaveBeenNthCalledWith(1, 1);          // first distance = 1 mi
+    expect(onProgress).toHaveBeenNthCalledWith(1, 1, 100, false);
+  });
+
+  it('fires onProgress with -1 sentinel for out-of-coverage points', async () => {
+    mockGetSkyCover.mockRejectedValue(new OutOfCoverageError());
+    const onProgress = vi.fn();
+    await runSearch(ORIGIN, BEARING, onProgress);
+    expect(onProgress).toHaveBeenCalledWith(1, -1, false);
+  });
+
+  it('narrows result via binary search to a value between 32 and 64 miles', async () => {
+    mockGetSkyCover
+      // Phase 1: indices 0-5 cloudy, index 6 (64mi) clear → firstClearIndex=6
+      .mockResolvedValueOnce(100) // 1mi:  cloudy
+      .mockResolvedValueOnce(100) // 2mi:  cloudy
+      .mockResolvedValueOnce(100) // 4mi:  cloudy
+      .mockResolvedValueOnce(100) // 8mi:  cloudy
+      .mockResolvedValueOnce(100) // 16mi: cloudy
+      .mockResolvedValueOnce(100) // 32mi: cloudy
+      .mockResolvedValueOnce(0)   // 64mi: clear → Phase 1 ends; low=16, high=64
+      // Phase 2 halvings (max 4):
+      .mockResolvedValueOnce(100) // mid=40: cloudy → low=40
+      .mockResolvedValueOnce(0)   // mid=52: clear  → high=52
+      .mockResolvedValueOnce(100) // mid=46: cloudy → low=46
+      .mockResolvedValueOnce(0);  // mid=49: clear  → high=49 → result=49.0
+
+    const result = await runSearch(ORIGIN, BEARING);
+    expect(result.clearSkyFound).toBe(true);
+    expect(result.nearestClearMiles).toBeGreaterThan(32);
+    expect(result.nearestClearMiles).toBeLessThanOrEqual(64);
+    expect(result.nearestClearMiles % 0.5).toBe(0); // rounded to nearest 0.5
+  });
+});

@@ -183,6 +183,14 @@ No PII. No coordinates logged.
 
 ---
 
+## Testing
+
+Tests live alongside source in `src/core/` — one file per module (`geo.test.ts`, `weather.test.ts`, `search.test.ts`). Run with `npm test` (Vitest). Tests run automatically in CI before every build.
+
+**Rule:** any new logic added to `src/core/` should include unit tests in the corresponding `.test.ts` file. Use `vi.stubGlobal('fetch', ...)` to mock the NWS API and `vi.mock('./weather', ...)` to isolate search logic.
+
+---
+
 ## Future features (deferred — design for them, don't build yet)
 
 - **F2 — Map view:** Show search path and result on a map. The `SearchResult.points` array already scaffolds this — keep returning it from the search engine.

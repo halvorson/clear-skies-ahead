@@ -21,7 +21,7 @@ Read TASKS.md in the repo root. For every task listed under "Pending Tasks", imp
 ## Pending Tasks
 
 ### Task 18 — Add Vitest unit tests for core logic
-`[ ]`
+`[x]` Installed `vitest` dev dep; added `"test": "vitest run"` to `package.json`; created `src/core/geo.test.ts` (9 tests: all 16 compass labels, roundToHalfMile, projectPoint), `src/core/weather.test.ts` (10 tests: 404/missing-gridId/500-retry/time-slot-selection, isClear threshold), `src/core/search.test.ts` (7 tests: all-clear, all-cloudy, all-OOC, mixed OOC, onChecking/onProgress callbacks, -1 sentinel, binary narrowing). 26/26 passing.
 Add a focused unit test suite covering `src/core/geo.ts`, `src/core/search.ts`, and `src/core/weather.ts`. These three files contain all the logic-dense code where bugs have actually appeared. Skip the UI layer (`src/ui/`) — DOM-coupled tests have low ROI here.
 
 **Setup**
@@ -133,10 +133,7 @@ Several things in `CLAUDE.md`, `docs/PRD.md`, and `docs/TDD.md` no longer match 
 ---
 
 ### Task 26 — Add `npm test` to CI pipeline (depends on Task 18)
-`[ ]`
-Once Vitest tests exist (Task 18), add a `run: npm test` step to both GitHub Actions workflows *before* the build step. A failing test should block any deploy.
-
-**Files:** `.github/workflows/deploy-preview.yml`, `.github/workflows/deploy-production.yml`
+`[x]` Added `- name: Test / run: npm test` step before the Build step in both `.github/workflows/deploy-preview.yml` and `.github/workflows/deploy-production.yml`. A failing test now blocks any deploy.
 
 ---
 
