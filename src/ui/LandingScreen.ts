@@ -22,6 +22,7 @@ export class LandingScreen {
           <span slot="icon" class="material-symbols-rounded">my_location</span>
           Find Clear Sky
         </md-filled-button>
+        <p class="app-version">v${__APP_VERSION__}</p>
       </div>
     `;
     container.appendChild(this.el);

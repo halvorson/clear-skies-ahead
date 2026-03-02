@@ -57,7 +57,7 @@ Add a focused unit test suite covering `src/core/geo.ts`, `src/core/search.ts`, 
 ---
 
 ### Task 21 — Display app version on landing screen
-`[ ]`
+`[x]` Added `define: { __APP_VERSION__ }` to `vite.config.ts` using `pkg.version`, declared `__APP_VERSION__` in `src/vite-env.d.ts`, added `<p class="app-version">v${__APP_VERSION__}</p>` to `LandingScreen.ts`, and `.app-version` style to `src/styles.css`.
 Show the current `package.json` version string (e.g. `v1.0.2`) at the bottom of the landing screen. Bake it at build time via Vite's `define` config — bumping the version in `package.json` then automatically updates the displayed version on the next build with no extra step.
 
 **Implementation:**
