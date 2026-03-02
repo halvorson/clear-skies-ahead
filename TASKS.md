@@ -72,7 +72,7 @@ Show the current `package.json` version string (e.g. `v1.0.2`) at the bottom of 
 
 ### Task 22 — Show cloud cover % on clear-sky history entries
 `[x]`
-Added `skyCoverPercent?: number` to `HistoryEntry` in `src/types.ts`; populated in `App.addToHistory()` from last clear point; updated clear-sky branch in `ResultScreen.ts`, `LoadingScreen.ts`, `ErrorScreen.ts` to append `(${entry.skyCoverPercent}% clouds)`.
+Added `skyCoverPercent?: number` to `HistoryEntry` in `src/types.ts`; populated in `App.addToHistory()` from last clear point; updated clear-sky branch in `ResultScreen.ts`, `LoadingScreen.ts`, `ErrorScreen.ts` to append `(${entry.skyCoverPercent}% clouds)`. Clear-sky history entries now show e.g. `NNW — 5.5 mi (8% clouds)`.
 Clear-sky history entries currently show e.g. `NNW — 5.5 mi`. Append the sky cover at the result point: `NNW — 5.5 mi (8% clouds)`. Gives users a sense of how clear "clear" actually was.
 
 **Implementation:**
@@ -85,7 +85,8 @@ Clear-sky history entries currently show e.g. `NNW — 5.5 mi`. Append the sky c
 ---
 
 ### Task 23 — Show farthest checked distance on no-clear-sky history entries
-`[ ]`
+`[x]`
+Fixed `App.addToHistory()` to use `Math.max(...points.map(p => p.distanceMiles))` for non-clear results (fixes bug where distanceMiles was 0 for no-clear-sky entries); updated no-clear-sky branch in `ResultScreen.ts`, `LoadingScreen.ts`, `ErrorScreen.ts` to show `NNW — no clear sky (1000 mi checked)`.
 "No clear sky" (non-coverage) history entries currently show `NNW — no clear sky` with no distance context. Update to: `NNW — no clear sky (1000 mi checked)`.
 
 **Implementation:**
@@ -103,7 +104,8 @@ Clear-sky history entries currently show e.g. `NNW — 5.5 mi`. Append the sky c
 ---
 
 ### Task 24 — Add city/state to success card (NWS relativeLocation)
-`[ ]`
+`[x]`
+Added `resultLocation?: { city: string; state: string }` to `SearchResult` in `src/types.ts`; added `getLocationName()` to `src/core/weather.ts`; called after Phase 2 in `search.ts` using `projectPoint(origin, bearingDeg, high)`; displayed as "near Portland, OR" subtext in `ResultScreen.buildResultCard()` using `.no-result-subtext` class.
 The NWS `/points/{lat},{lon}` response already includes `relativeLocation.properties.city` and `relativeLocation.properties.state` (e.g. `"Portland"`, `"OR"`) — we make this call for every searched point but don't capture those fields. After the binary search resolves, show the nearest city/state as subtext on the result card: *"Sky is clear 5.5 miles NNW of you"* + *"near Portland, OR"*.
 
 **Implementation (preferred — no extra HTTP request):**

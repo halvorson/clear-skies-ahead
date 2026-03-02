@@ -166,15 +166,20 @@ export class App {
   }
 
   private addToHistory(result: SearchResult): void {
+    const resultSkyCover = result.clearSkyFound
+      ? result.points.filter(p => p.isClear).at(-1)?.skyCoverPercent
+      : undefined;
+
     this.history.unshift({
       compassLabel: result.compassLabel,
       clearSkyFound: result.clearSkyFound,
       outOfCoverage: result.outOfCoverage,
-      distanceMiles: result.outOfCoverage
-        ? Math.max(...result.points.map(p => p.distanceMiles))
-        : result.nearestClearMiles,
+      distanceMiles: result.clearSkyFound
+        ? result.nearestClearMiles
+        : Math.max(...result.points.map(p => p.distanceMiles)),
       bearingDegrees: result.bearingDegrees,
       timestamp: Date.now(),
+      skyCoverPercent: resultSkyCover,
     });
     if (this.history.length > 10) {
       this.history.pop();

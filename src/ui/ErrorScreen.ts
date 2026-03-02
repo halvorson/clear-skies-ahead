@@ -56,10 +56,11 @@ function buildHistorySection(history: HistoryEntry[]): string {
       text = `${entry.compassLabel} — no coverage (${entry.distanceMiles} mi)`;
     } else if (entry.clearSkyFound) {
       iconClass = 'history-icon';
-      text = `${entry.compassLabel} — ${entry.distanceMiles} mi`;
+      const coverStr = entry.skyCoverPercent !== undefined ? ` (${entry.skyCoverPercent}% clouds)` : '';
+      text = `${entry.compassLabel} — ${entry.distanceMiles} mi${coverStr}`;
     } else {
       iconClass = 'history-icon history-icon--no-result';
-      text = `${entry.compassLabel} — no clear sky`;
+      text = `${entry.compassLabel} — no clear sky (${entry.distanceMiles} mi checked)`;
     }
 
     return `
