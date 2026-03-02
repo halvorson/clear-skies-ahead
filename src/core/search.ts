@@ -1,7 +1,7 @@
 import type { LatLng, SearchPoint, SearchResult } from '../types';
 import { OutOfCoverageError } from '../types';
 import { projectPoint, bearingToCompass, roundToHalfMile } from './geo';
-import { getSkyCover, isClear } from './weather';
+import { getSkyCover, isClear, getLocationName } from './weather';
 
 const DISTANCES = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1000];
 
@@ -103,6 +103,9 @@ export async function runSearch(
     }
   }
 
+  const resultCoords = projectPoint(origin, bearingDeg, high);
+  const resultLocation = await getLocationName(resultCoords) ?? undefined;
+
   return {
     clearSkyFound: true,
     outOfCoverage: false,
@@ -111,5 +114,6 @@ export async function runSearch(
     compassLabel: bearingToCompass(bearingDeg),
     points,
     apiCallsMade: points.length,
+    resultLocation,
   };
 }

@@ -37,6 +37,7 @@ function buildResultCard(result: SearchResult): string {
         <span class="material-symbols-rounded" style="transform: rotate(${rotation}deg)">near_me</span>
       </div>
       <p class="result-headline">Sky is clear ${result.nearestClearMiles} miles ${result.compassLabel} of you</p>
+      ${result.resultLocation ? `<p class="no-result-subtext" style="margin-top:4px">near ${result.resultLocation.city}, ${result.resultLocation.state}</p>` : ''}
     </div>
   `;
 }
@@ -58,12 +59,13 @@ function buildHistorySection(history: HistoryEntry[]): string {
     } else if (entry.clearSkyFound) {
       iconName = 'navigation';
       iconClass = 'history-icon';
-      text = `${entry.compassLabel} — ${entry.distanceMiles} mi`;
+      const coverStr = entry.skyCoverPercent !== undefined ? ` (${entry.skyCoverPercent}% clouds)` : '';
+      text = `${entry.compassLabel} — ${entry.distanceMiles} mi${coverStr}`;
       dataBearing = `data-bearing="${entry.bearingDegrees}"`;
     } else {
       iconName = 'navigation';
       iconClass = 'history-icon history-icon--no-result';
-      text = `${entry.compassLabel} — no clear sky`;
+      text = `${entry.compassLabel} — no clear sky (${entry.distanceMiles} mi checked)`;
       dataBearing = `data-bearing="${entry.bearingDegrees}"`;
     }
 

@@ -30,6 +30,8 @@ export interface SearchResult {
   /** All points checked — scaffolding for future map feature. Do not remove. */
   points: SearchPoint[];
   apiCallsMade: number;
+  /** Nearest city/state from NWS relativeLocation. Only present when clearSkyFound is true. */
+  resultLocation?: { city: string; state: string };
 }
 
 // ─── History ──────────────────────────────────────────────────────────────────
@@ -43,6 +45,8 @@ export interface HistoryEntry {
   bearingDegrees: number;
   /** Date.now() at the moment the search completed. */
   timestamp: number;
+  /** Sky cover % at the result point. Only present when clearSkyFound is true. */
+  skyCoverPercent?: number;
 }
 
 // ─── Debug ────────────────────────────────────────────────────────────────────
