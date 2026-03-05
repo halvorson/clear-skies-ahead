@@ -21,12 +21,12 @@ beforeEach(() => {
 });
 
 describe('runSearch', () => {
-  it('returns clearSkyFound:true with rounded distance when clear at first check', async () => {
+  it('returns clearSkyFound:true with 0 distance when clear at origin (first check)', async () => {
     mockGetSkyCover.mockResolvedValue(0); // all clear
     const result = await runSearch(ORIGIN, BEARING);
     expect(result.clearSkyFound).toBe(true);
     expect(result.outOfCoverage).toBe(false);
-    expect(result.nearestClearMiles).toBe(1.0); // roundToHalfMile(1) = 1.0
+    expect(result.nearestClearMiles).toBe(0); // clear right here
   });
 
   it('returns clearSkyFound:false, outOfCoverage:false when all points are cloudy', async () => {
@@ -45,36 +45,37 @@ describe('runSearch', () => {
 
   it('returns outOfCoverage:true when search hits OOC even after cloudy points', async () => {
     mockGetSkyCover
-      .mockResolvedValueOnce(100)            // 1mi: cloudy
-      .mockRejectedValue(new OutOfCoverageError()); // 2mi+: out-of-coverage → break
+      .mockResolvedValueOnce(100)            // 0mi: cloudy
+      .mockRejectedValue(new OutOfCoverageError()); // 1mi+: out-of-coverage → break
     const result = await runSearch(ORIGIN, BEARING);
     expect(result.clearSkyFound).toBe(false);
     expect(result.outOfCoverage).toBe(true); // OOC hit stops the search
   });
 
   it('fires onChecking before each NWS call and onProgress after with correct values', async () => {
-    mockGetSkyCover.mockResolvedValue(100); // all cloudy → 11 Phase 1 calls, no Phase 2
+    mockGetSkyCover.mockResolvedValue(100); // all cloudy → 12 Phase 1 calls, no Phase 2
     const onChecking = vi.fn();
     const onProgress = vi.fn();
 
     await runSearch(ORIGIN, BEARING, onProgress, onChecking);
 
-    expect(onChecking).toHaveBeenCalledTimes(11);
-    expect(onProgress).toHaveBeenCalledTimes(11);
-    expect(onChecking).toHaveBeenNthCalledWith(1, 1);          // first distance = 1 mi
-    expect(onProgress).toHaveBeenNthCalledWith(1, 1, 100, false);
+    expect(onChecking).toHaveBeenCalledTimes(12);
+    expect(onProgress).toHaveBeenCalledTimes(12);
+    expect(onChecking).toHaveBeenNthCalledWith(1, 0);          // first distance = 0 mi
+    expect(onProgress).toHaveBeenNthCalledWith(1, 0, 100, false);
   });
 
   it('fires onProgress with -1 sentinel for out-of-coverage points', async () => {
     mockGetSkyCover.mockRejectedValue(new OutOfCoverageError());
     const onProgress = vi.fn();
     await runSearch(ORIGIN, BEARING, onProgress);
-    expect(onProgress).toHaveBeenCalledWith(1, -1, false);
+    expect(onProgress).toHaveBeenCalledWith(0, -1, false);
   });
 
   it('narrows result via binary search to a value between 32 and 64 miles', async () => {
     mockGetSkyCover
-      // Phase 1: indices 0-5 cloudy, index 6 (64mi) clear → firstClearIndex=6
+      // Phase 1: indices 0-7 cloudy, index 8 (64mi) clear → firstClearIndex=8
+      .mockResolvedValueOnce(100) // 0mi:  cloudy
       .mockResolvedValueOnce(100) // 1mi:  cloudy
       .mockResolvedValueOnce(100) // 2mi:  cloudy
       .mockResolvedValueOnce(100) // 4mi:  cloudy
