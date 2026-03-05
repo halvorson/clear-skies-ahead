@@ -22,6 +22,18 @@ function buildResultCard(result: SearchResult): string {
     `;
   }
 
+  if (result.nearestClearMiles === 0) {
+    return `
+      <div class="result-card">
+        <div class="result-compass" aria-hidden="true">
+          <span class="material-symbols-rounded">wb_sunny</span>
+        </div>
+        <p class="result-headline">It's already clear where you are.</p>
+        <p class="no-result-subtext" style="margin-top:4px">You literally could have just looked up. You're welcome.</p>
+      </div>
+    `;
+  }
+
   // Rotate the near_me icon (which points NE at 0°) by bearing - 45° to point in the right direction
   const rotation = result.bearingDegrees - 45;
 

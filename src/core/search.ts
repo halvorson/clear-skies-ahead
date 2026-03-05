@@ -3,7 +3,7 @@ import { OutOfCoverageError } from '../types';
 import { projectPoint, bearingToCompass, roundToHalfMile } from './geo';
 import { getSkyCover, isClear, getLocationName } from './weather';
 
-const DISTANCES = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1000];
+const DISTANCES = [0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1000];
 
 export type SearchProgressCallback = (
   distanceMiles: number,
@@ -67,6 +67,20 @@ export async function runSearch(
       compassLabel: bearingToCompass(bearingDeg),
       points,
       apiCallsMade: points.length,
+    };
+  }
+
+  // Short-circuit: already clear at the origin — no need to narrow further
+  if (firstClearIndex === 0) {
+    return {
+      clearSkyFound: true,
+      outOfCoverage: false,
+      nearestClearMiles: 0,
+      bearingDegrees: bearingDeg,
+      compassLabel: bearingToCompass(bearingDeg),
+      points,
+      apiCallsMade: points.length,
+      resultLocation: undefined,
     };
   }
 
