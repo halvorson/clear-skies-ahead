@@ -17,18 +17,13 @@ export class LoadingScreen {
     this.el.innerHTML = `
       <div class="hero-card hero-card--sky">
         <span class="material-symbols-rounded hero-icon hero-icon--spinning" aria-hidden="true">wb_sunny</span>
-        <div class="loading-spinner" role="progressbar" aria-label="Searching"></div>
         <p class="loading-status"></p>
+        <div class="loading-log"></div>
       </div>
       <md-filled-button class="cta-fab" disabled has-icon>
         <span slot="icon" class="material-symbols-rounded">my_location</span>
         Try a new direction
       </md-filled-button>
-      <div class="history-section">
-        <hr class="history-divider" />
-        <span class="history-label">Searching…</span>
-        <div class="loading-log"></div>
-      </div>
       ${buildHistorySection(history)}
     `;
     container.appendChild(this.el);

@@ -11,10 +11,10 @@ body {
 
 /* ── MD3 global tokens for @material/web ─────────────────────── */
 :root {
-  --md-sys-color-primary: #b8c232;
-  --md-sys-color-on-primary: #1c1c00;
-  --md-sys-color-primary-container: #f3f9a7;
-  --md-sys-color-on-primary-container: #1c1c00;
+  --md-sys-color-primary: #d48020;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #fce8cc;
+  --md-sys-color-on-primary-container: #3a1e00;
   --md-sys-color-secondary: #5db8d4;
   --md-sys-color-on-secondary: #ffffff;
   --md-sys-color-error: #ba1a1a;
@@ -53,17 +53,17 @@ body {
   background: linear-gradient(160deg, #4da8c8 0%, #7cc4dc 45%, #aadaee 100%);
 }
 
-/* Found clear sky (origin was cloudy) — deeper, richer blue */
-.hero-card--found-clear {
-  background: linear-gradient(160deg, #1e7ca0 0%, #3ea8cc 50%, #78cce4 100%);
-}
-
-/* Found cloud boundary (origin was sunny) — warm amber */
-.hero-card--found-clouds {
+/* Sun-dominant outcome: found clear sky, or no clouds found (sunny forever) */
+.hero-card--sunny {
   background: linear-gradient(160deg, #d08018 0%, #eeaa38 50%, #f8cc68 100%);
 }
 
-/* No result / OOC / error — muted overcast */
+/* Cloud-dominant outcome: found cloud boundary, or no clear sky found (cloudy forever) */
+.hero-card--cloudy {
+  background: linear-gradient(160deg, #2a5878 0%, #4a80a8 50%, #78aac4 100%);
+}
+
+/* OOC / error — washed-out overcast */
 .hero-card--muted {
   background: linear-gradient(160deg, #5878a0 0%, #8298b8 50%, #aabccc 100%);
 }
@@ -168,20 +168,6 @@ md-filled-button .material-symbols-rounded {
 }
 
 /* ── Loading screen ───────────────────────────────────────────── */
-@keyframes css-spin {
-  to { transform: rotate(360deg); }
-}
-
-.loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid rgba(255, 255, 255, 0.28);
-  border-top-color: rgba(255, 255, 255, 0.92);
-  border-radius: 50%;
-  animation: css-spin 0.8s linear infinite;
-  margin: 8px auto 10px;
-}
-
 .loading-status {
   font-size: 15px;
   color: rgba(255, 255, 255, 0.85);
@@ -193,6 +179,11 @@ md-filled-button .material-symbols-rounded {
   text-align: left;
   font-size: 13px;
   line-height: 2;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  max-height: 180px;
+  overflow: hidden;
 }
 
 .log-icon {
@@ -233,10 +224,21 @@ md-filled-button .material-symbols-rounded {
 
 .history-icon {
   font-size: 20px;
-  color: #b8c232;
+  color: #6b7280;
   flex-shrink: 0;
 }
 
+/* Sun-dominant result (found clear sky, or sunny all the way) */
+.history-icon--sunny {
+  color: #d48020;
+}
+
+/* Cloud-dominant result (found cloud boundary, or cloudy all the way) */
+.history-icon--cloudy {
+  color: #4a80a8;
+}
+
+/* OOC / failure */
 .history-icon--no-result {
   color: rgba(0, 0, 0, 0.28);
 }

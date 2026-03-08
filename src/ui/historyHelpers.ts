@@ -57,22 +57,24 @@ export function buildHistorySection(history: HistoryEntry[]): string {
       iconClass = 'history-icon history-icon--no-result';
       text = `${entry.compassLabel} — out of coverage at ${entry.distanceMiles} mi`;
     } else if (entry.clearSkyFound) {
-      iconClass = 'history-icon';
       if (entry.searchMode === 'find-clouds') {
-        // Found cloud boundary while in sunshine: "NNW — clear for 5.5 mi"
-        text = `${entry.compassLabel} — clear for ${entry.distanceMiles} mi`;
+        // Found cloud boundary — cloud-dominant result
+        iconClass = 'history-icon history-icon--cloudy';
+        text = `${entry.compassLabel} — clouds at ${entry.distanceMiles} mi`;
       } else {
-        // find-clear success: "NNW — 5.5 mi (8% clouds)"
+        // Found clear sky — sun-dominant result
+        iconClass = 'history-icon history-icon--sunny';
         const coverStr = entry.skyCoverPercent !== undefined ? ` (${entry.skyCoverPercent}% clouds)` : '';
-        text = `${entry.compassLabel} — ${entry.distanceMiles} mi${coverStr}`;
+        text = `${entry.compassLabel} — clear at ${entry.distanceMiles} mi${coverStr}`;
       }
     } else {
-      iconClass = 'history-icon history-icon--no-result';
       if (entry.searchMode === 'find-clouds') {
-        // No clouds found within 1000 mi
+        // No clouds found — sunny all the way
+        iconClass = 'history-icon history-icon--sunny';
         text = `${entry.compassLabel} — no clouds (${entry.distanceMiles} mi checked)`;
       } else {
-        // find-clear, no clear sky found
+        // No clear sky found — cloudy all the way
+        iconClass = 'history-icon history-icon--cloudy';
         text = `${entry.compassLabel} — no clear sky (${entry.distanceMiles} mi checked)`;
       }
     }

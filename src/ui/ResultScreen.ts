@@ -3,9 +3,12 @@ import type { SearchResult, HistoryEntry } from '../types';
 import { buildHistorySection, startHistoryIconCompass } from './historyHelpers';
 
 function heroCardClass(result: SearchResult): string {
-  if (result.outOfCoverage || !result.clearSkyFound) return 'hero-card--muted';
-  if (result.searchMode === 'find-clouds') return 'hero-card--found-clouds';
-  return 'hero-card--found-clear';
+  if (result.outOfCoverage) return 'hero-card--muted';
+  // Sun-dominant: found clear sky, or no clouds exist (sunny forever)
+  if (result.searchMode === 'find-clear' && result.clearSkyFound) return 'hero-card--sunny';
+  if (result.searchMode === 'find-clouds' && !result.clearSkyFound) return 'hero-card--sunny';
+  // Cloud-dominant: found cloud boundary, or no clear sky (cloudy forever)
+  return 'hero-card--cloudy';
 }
 
 function buildResultCard(result: SearchResult): string {
@@ -22,8 +25,9 @@ function buildResultCard(result: SearchResult): string {
 
   if (result.searchMode === 'find-clouds') {
     if (!result.clearSkyFound) {
+      // Sunny origin, no clouds within 1000 mi — sunny result
       return `
-        <div class="hero-card hero-card--sky">
+        <div class="hero-card hero-card--sunny">
           <span class="material-symbols-rounded hero-icon" aria-hidden="true">wb_sunny</span>
           <p class="hero-headline">Clear sky extends beyond 1,000 miles ${result.compassLabel}</p>
           <p class="hero-subtext">No clouds in this direction — enjoy the sunshine.</p>
@@ -31,24 +35,25 @@ function buildResultCard(result: SearchResult): string {
       `;
     }
 
-    // Found cloud boundary — origin was sunny
+    // Found cloud boundary — origin was sunny, cloud-dominant result
     const rotation = result.bearingDegrees - 45;
     return `
-      <div class="hero-card hero-card--found-clouds">
+      <div class="hero-card hero-card--cloudy">
         <div class="hero-compass result-compass" aria-hidden="true">
           <span class="material-symbols-rounded" style="transform: rotate(${rotation}deg)">near_me</span>
         </div>
         <p class="hero-distance">${result.nearestClearMiles} mi</p>
         <p class="hero-direction">${result.compassLabel}</p>
-        ${result.resultLocation ? `<p class="hero-caption">near ${result.resultLocation.city}, ${result.resultLocation.state}</p>` : ''}
+        <p class="hero-caption">Clouds begin${result.resultLocation ? ` near ${result.resultLocation.city}, ${result.resultLocation.state}` : ' here'}</p>
       </div>
     `;
   }
 
   // find-clear mode
   if (!result.clearSkyFound) {
+    // Cloudy origin, no clear sky within 1000 mi — cloud-dominant result
     return `
-      <div class="hero-card hero-card--muted">
+      <div class="hero-card hero-card--cloudy">
         <span class="material-symbols-rounded hero-icon" aria-hidden="true">cloud</span>
         <p class="hero-headline">No clear sky within 1,000 miles ${result.compassLabel}</p>
         <p class="hero-subtext">Try scanning a different direction.</p>
@@ -56,16 +61,16 @@ function buildResultCard(result: SearchResult): string {
     `;
   }
 
-  // Found clear sky — origin was cloudy
+  // Found clear sky — origin was cloudy, sun-dominant result
   const rotation = result.bearingDegrees - 45;
   return `
-    <div class="hero-card hero-card--found-clear">
+    <div class="hero-card hero-card--sunny">
       <div class="hero-compass result-compass" aria-hidden="true">
         <span class="material-symbols-rounded" style="transform: rotate(${rotation}deg)">near_me</span>
       </div>
       <p class="hero-distance">${result.nearestClearMiles} mi</p>
       <p class="hero-direction">${result.compassLabel}</p>
-      ${result.resultLocation ? `<p class="hero-caption">near ${result.resultLocation.city}, ${result.resultLocation.state}</p>` : ''}
+      <p class="hero-caption">Clear sky begins${result.resultLocation ? ` near ${result.resultLocation.city}, ${result.resultLocation.state}` : ' here'}</p>
     </div>
   `;
 }
