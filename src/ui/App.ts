@@ -118,6 +118,14 @@ export class App {
             loading.resolveEntry(pendingRow, sky, clear);
             pendingRow = null;
           }
+          // After origin check, update status to reflect detected mode
+          if (miles === 0) {
+            loading.setStatus(
+              clear
+                ? 'Clear here — finding where it gets cloudy…'
+                : 'Cloudy here — finding clear sky…'
+            );
+          }
         },
         (miles) => {
           pendingRow = loading.startEntry(miles);
@@ -171,6 +179,7 @@ export class App {
       : undefined;
 
     this.history.unshift({
+      searchMode: result.searchMode,
       compassLabel: result.compassLabel,
       clearSkyFound: result.clearSkyFound,
       outOfCoverage: result.outOfCoverage,

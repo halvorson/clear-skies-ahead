@@ -23,14 +23,17 @@ export async function runSearch(
   onPhaseChange?: SearchPhaseCallback,
 ): Promise<SearchResult> {
   const points: SearchPoint[] = [];
-  let firstClearIndex = -1;
+  let firstTargetIndex = -1;
   let hitOutOfCoverage = false;
+  let searchMode: 'find-clear' | 'find-clouds' = 'find-clear';
+  let originSkyCoverPercent = -1;
 
   // Phase 1 — Exponential expansion
   onPhaseChange?.('exponential');
   for (let i = 0; i < DISTANCES.length; i++) {
     const distance = DISTANCES[i];
-    const coords = projectPoint(origin, bearingDeg, distance);
+    // Use origin coords directly for distance 0 to avoid floating-point drift
+    const coords = i === 0 ? origin : projectPoint(origin, bearingDeg, distance);
 
     onChecking?.(distance);
 
@@ -39,10 +42,13 @@ export async function runSearch(
       skyCoverPercent = await getSkyCover(coords);
     } catch (err) {
       if (err instanceof OutOfCoverageError) {
+        if (i === 0) {
+          searchMode = 'find-clear'; // default mode when origin is OOC
+        }
         points.push({ distanceMiles: distance, coords, skyCoverPercent: -1, isClear: false });
         onProgress?.(distance, -1, false);
         hitOutOfCoverage = true;
-        break; // further points in this direction will also be OOC
+        break;
       }
       throw err;
     }
@@ -51,43 +57,39 @@ export async function runSearch(
     points.push({ distanceMiles: distance, coords, skyCoverPercent, isClear: clear });
     onProgress?.(distance, skyCoverPercent, clear);
 
-    if (clear) {
-      firstClearIndex = i;
+    if (i === 0) {
+      // Origin check: determine search mode based on current sky conditions, then continue outward
+      originSkyCoverPercent = skyCoverPercent;
+      searchMode = clear ? 'find-clouds' : 'find-clear';
+      continue;
+    }
+
+    // i > 0: check if this point is the target (depends on mode)
+    const isTarget = searchMode === 'find-clear' ? clear : !clear;
+    if (isTarget) {
+      firstTargetIndex = i;
       break;
     }
   }
 
-  if (firstClearIndex === -1) {
-    const outOfCoverage = hitOutOfCoverage;
+  if (firstTargetIndex === -1) {
     return {
+      searchMode,
+      originSkyCoverPercent,
       clearSkyFound: false,
-      outOfCoverage,
+      outOfCoverage: hitOutOfCoverage,
       nearestClearMiles: 0,
       bearingDegrees: bearingDeg,
       compassLabel: bearingToCompass(bearingDeg),
       points,
       apiCallsMade: points.length,
-    };
-  }
-
-  // Short-circuit: already clear at the origin — no need to narrow further
-  if (firstClearIndex === 0) {
-    return {
-      clearSkyFound: true,
-      outOfCoverage: false,
-      nearestClearMiles: 0,
-      bearingDegrees: bearingDeg,
-      compassLabel: bearingToCompass(bearingDeg),
-      points,
-      apiCallsMade: points.length,
-      resultLocation: undefined,
     };
   }
 
   // Phase 2 — Binary narrowing (max 4 halvings, or stop when gap ≤ 1 mile)
   onPhaseChange?.('binary');
-  let low = firstClearIndex < 2 ? 0 : DISTANCES[firstClearIndex - 2];
-  let high = DISTANCES[firstClearIndex];
+  let low = firstTargetIndex < 2 ? 0 : DISTANCES[firstTargetIndex - 2];
+  let high = DISTANCES[firstTargetIndex];
   let halvings = 0;
 
   while (halvings < 4 && high - low > 1) {
@@ -109,10 +111,11 @@ export async function runSearch(
     }
 
     const clear = isClear(skyCoverPercent);
+    const isTarget = searchMode === 'find-clear' ? clear : !clear;
     points.push({ distanceMiles: mid, coords, skyCoverPercent, isClear: clear });
     onProgress?.(mid, skyCoverPercent, clear);
 
-    if (clear) {
+    if (isTarget) {
       high = mid;
     } else {
       low = mid;
@@ -123,6 +126,8 @@ export async function runSearch(
   const resultLocation = await getLocationName(resultCoords) ?? undefined;
 
   return {
+    searchMode,
+    originSkyCoverPercent,
     clearSkyFound: true,
     outOfCoverage: false,
     nearestClearMiles: roundToHalfMile(high),
