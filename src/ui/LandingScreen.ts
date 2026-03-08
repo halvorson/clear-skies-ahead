@@ -14,8 +14,7 @@ export class LandingScreen {
       <div class="screen-content">
         <div class="result-card">
           <p class="app-tagline">
-            Point your phone in any direction and find out how far it is to clear sky.
-            One tap, one answer.
+            Point your phone in any direction. Cloudy? Find out how far to clear sky. Sunny? Find out where the clouds begin. One tap, one answer.
           </p>
         </div>
         <md-filled-button class="cta-fab landing-btn" has-icon>

@@ -120,6 +120,10 @@ interface SearchResult {
   compassLabel: string;         // e.g. "NNW"
   points: SearchPoint[];        // all checked points — scaffolding for future map feature
   apiCallsMade: number;
+  /** Whether the search was looking for clear sky or for clouds (determined by origin sky cover). */
+  searchMode: 'find-clear' | 'find-clouds';
+  /** Sky cover % at the user's current location. -1 if origin was out of NWS coverage. */
+  originSkyCoverPercent: number;
 }
 
 interface HistoryEntry {
@@ -129,6 +133,7 @@ interface HistoryEntry {
   distanceMiles: number;
   bearingDegrees: number;
   timestamp: number;
+  searchMode: 'find-clear' | 'find-clouds';
 }
 
 interface DebugContext {
@@ -198,6 +203,16 @@ async function runSearch(
 ): Promise<SearchResult>
 ```
 
+**Phase 0 — Origin check:**
+```
+onChecking(0)
+skyCover = await getSkyCover(origin)
+originSkyCoverPercent = skyCover
+searchMode = isClear(skyCover) ? 'find-clouds' : 'find-clear'
+record origin point
+onProgress(0, skyCover, isClear(skyCover))
+```
+
 **Phase 1 — Exponential expansion:**
 ```
 DISTANCES = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1000]
@@ -210,21 +225,23 @@ for each distance in DISTANCES:
   catch OutOfCoverageError:
     record point with skyCoverPercent: -1
     onProgress(distance, -1, false)
-    continue          ← skip, don't break — keep searching outward
+    hitOutOfCoverage = true
+    break
   record point
-  onProgress(distance, skyCover, isClear)
-  if isClear → firstClearIndex = i; break
+  onProgress(distance, skyCover, isClear(skyCover))
+  isTarget = (searchMode === 'find-clear') ? isClear(skyCover) : !isClear(skyCover)
+  if isTarget → firstTargetIndex = i; break
 
-if firstClearIndex === -1:
-  outOfCoverage = all points have skyCoverPercent < 0
-  return { clearSkyFound: false, outOfCoverage, ... }
+if firstTargetIndex === -1:
+  outOfCoverage = hitOutOfCoverage
+  return { searchMode, clearSkyFound: false, outOfCoverage, ... }
 ```
 
 **Phase 2 — Binary narrowing:**
 ```
 onPhaseChange('binary')
-low = firstClearIndex < 2 ? 0 : DISTANCES[firstClearIndex - 2]
-high = DISTANCES[firstClearIndex]
+low = firstTargetIndex < 2 ? 0 : DISTANCES[firstTargetIndex - 2]
+high = DISTANCES[firstTargetIndex]
 halvings = 0
 
 while halvings < 4 AND (high - low) > 1:
@@ -236,11 +253,12 @@ while halvings < 4 AND (high - low) > 1:
   catch OutOfCoverageError:
     high = mid    ← treat as "too far", search closer
     continue
-  onProgress(mid, skyCover, isClear)
-  if isClear → high = mid
+  onProgress(mid, skyCover, isClear(skyCover))
+  isTarget = (searchMode === 'find-clear') ? isClear(skyCover) : !isClear(skyCover)
+  if isTarget → high = mid
   else → low = mid
 
-return { clearSkyFound: true, nearestClearMiles: roundToHalfMile(high), ... }
+return { searchMode, clearSkyFound: true, nearestClearMiles: roundToHalfMile(high), ... }
 ```
 
 ---
@@ -312,10 +330,12 @@ Constructor: `(container: HTMLElement, history: HistoryEntry[])`
 
 Constructor: `(container, result: SearchResult, history: HistoryEntry[], onCtaTap)`
 
-Three card states:
-1. **Clear sky found** — `result-card` with live compass arrow (`near_me` icon, rotates via `deviceorientation` listener: `(resultBearing - heading + 360) % 360 - 45`), headline: *"Sky is clear X miles NNW of you"*
-2. **No clear sky** — `no-result-card`, headline: *"No clear sky within 1,000 miles [compassLabel]"*, subtext: *"Try scanning a different direction."*
-3. **Out of coverage** — `no-result-card`, headline: *"No coverage in this direction"*, subtext with farthest checked distance
+Five card states:
+1. **Out of coverage** — `no-result-card`, headline: *"Ran out of coverage at [X] miles"* (both modes)
+2. **No target found (find-clear)** — `no-result-card`, headline: *"No clear sky within 1,000 miles [compassLabel]"*
+3. **No target found (find-clouds)** — `no-result-card`, headline: *"Clear sky extends beyond 1,000 miles [compassLabel]"*
+4. **Clear sky found (find-clear)** — `result-card` with live compass arrow (`near_me` icon, rotates via `deviceorientation` listener: `(resultBearing - heading + 360) % 360 - 45`), headline: *"Sky is clear X miles NNW of you"*
+5. **Clouds found (find-clouds)** — `result-card` with live compass arrow, headline: *"Clouds start X miles NNW of you"*
 
 History icons: `navigation` icon per entry, rotated live by `(bearing - heading + 360) % 360` to always point in the stored bearing's direction.
 

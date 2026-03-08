@@ -8,9 +8,11 @@
 
 ## 1. Overview
 
-clear-skies-ahead is a public-facing progressive web app (PWA) that answers one question: **"How far do I need to travel in the direction I'm facing to find clear sky?"**
+clear-skies-ahead is a public-facing progressive web app (PWA) that answers one question: **"How far do I need to travel in the direction I'm facing to reach the edge of the current sky conditions?"**
 
-Using the device's GPS location and compass bearing, the app searches outward along that bearing using an exponential expansion strategy, identifies the nearest point of clear sky, then narrows to a half-mile precision result. The answer is a single sentence with a live compass arrow: *"Sky is clear 5.5 miles E of you."*
+If it's cloudy at your location, the app finds the nearest clear sky. If it's sunny, it finds where the clouds begin.
+
+Using the device's GPS location and compass bearing, the app searches outward along that bearing using an exponential expansion strategy, identifies the sky boundary, then narrows to a half-mile precision result. The answer is a single sentence with a live compass arrow: *"Sky is clear 5.5 miles NNW of you"* or *"Clouds start 12 miles NNE of you."*
 
 No account required. No map to scroll. One tap, one answer.
 
@@ -71,16 +73,21 @@ On CTA tap, the app requests two permissions in sequence:
 
 Once permissions are granted, the app runs a search along the user's exact compass bearing:
 
+**Step 0 — Origin check:**
+- Check sky cover at the user's current GPS location (distance 0)
+- If clear (≤50%): switch to `find-clouds` mode — search outward for where clouds begin
+- If cloudy (>50%): stay in `find-clear` mode — search outward for nearest clear sky
+
 **Phase 1 — Exponential expansion:**
 - Check weather at 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1000 miles along the bearing
-- Stop as soon as a "clear" point is found
+- Stop as soon as the target is found (clear sky in find-clear mode; clouds in find-clouds mode)
 - Points outside NWS coverage (ocean, Canada, Mexico) return a `-1` sentinel and are skipped — the search continues outward
-- If no clear point is found: show result card with *"No clear sky within 1,000 miles [direction]"*
-- If every checked point was out of NWS coverage: show distinct result card *"No coverage in this direction"* with the farthest checked distance
+- If no target is found: show result card with `"No clear sky within 1,000 miles [direction]"` (find-clear) or `"Clear sky extends beyond 1,000 miles [direction]"` (find-clouds)
+- If every checked point was out of NWS coverage: show distinct result card `"No coverage in this direction"` with the farthest checked distance
 
 **Phase 2 — Binary narrowing:**
-- Step back two increments from the first clear point found
-- Binary search between that stepped-back distance and the clear point
+- Step back two increments from the first target point found
+- Binary search between that stepped-back distance and the target point
 - Maximum 4 halvings, stopping when gap ≤ 1 mile
 - Report the nearest half-mile (rounded to nearest 0.5)
 
@@ -96,6 +103,7 @@ Once permissions are granted, the app runs a search along the user's exact compa
 The loading screen mirrors the result screen layout for visual continuity:
 - Same header (spinning sun icon + title)
 - Card showing CSS spinner + status text (*"Heading 252.9° WSW…"*)
+- After origin sky check resolves: updates to *"Clear here — finding where it gets cloudy…"* or *"Cloudy here — finding clear sky…"*
 - Disabled **"Try a new direction"** button (prevents double-tap; keeps layout stable)
 - **PROGRESS section** — live log of every distance checked, newest at top, updated in two phases:
   - Phase 1 (before API returns): shows the distance with *"checking…"* placeholder
@@ -105,15 +113,25 @@ The loading screen mirrors the result screen layout for visual continuity:
 
 ### 4.5 Result Display
 
-**Clear sky found:**
+**Clear sky found (find-clear mode):**
 - Result card with a live compass arrow (rotates with device heading to always point toward the result)
 - Single headline: *"Sky is clear [X] miles [compass label] of you"*
 - City/state subtext when NWS coverage is available: *"near Portland, OR"*
 - **"Try a new direction"** button re-runs the full flow with the new bearing at the moment of tap (no permission re-request)
 
-**No clear sky within 1,000 miles:**
+**Clouds found (find-clouds mode):**
+- Result card with a live compass arrow pointing toward the cloud boundary
+- Single headline: *"Clouds start [X] miles [compass label] of you"*
+- City/state subtext when NWS coverage is available: *"near Portland, OR"*
+- **"Try a new direction"** button re-runs the full flow
+
+**No clear sky within 1,000 miles (find-clear mode):**
 - Card headline: *"No clear sky within 1,000 miles [compass label]"*
 - Subtext: *"Try scanning a different direction."*
+
+**No clouds within 1,000 miles (find-clouds mode):**
+- Card headline: *"Clear sky extends beyond 1,000 miles [compass label]"*
+- Subtext: *"No clouds in this direction — enjoy the sunshine."*
 
 **Out of coverage:**
 - Card headline: *"No coverage in this direction"*
@@ -123,9 +141,11 @@ The loading screen mirrors the result screen layout for visual continuity:
 
 - Within the current session, maintain a history list of past results below the CTA on both the result and error screens
 - Each history entry shows: a directional arrow icon (rotates live with compass to point toward that search's bearing), compass label, distance or result type, and time ago
-  - Clear result: `navigation` icon (yellow-green) → *"NNW — 5.5 mi (8% clouds)"*
-  - No clear sky: `navigation` icon (muted) → *"NNW — no clear sky (1000 mi checked)"*
+  - Clear result (find-clear): `navigation` icon (yellow-green) → *"NNW — 5.5 mi (8% clouds)"*
+  - No clear sky (find-clear): `navigation` icon (muted) → *"NNW — no clear sky (1000 mi checked)"*
   - Out of coverage: `navigation` icon (muted) → *"NNW — no coverage (1000 mi)"*
+  - Clouds found (find-clouds): `navigation` icon (yellow-green) → *"NNW — clear for 5.5 mi"*
+  - No clouds (find-clouds): `navigation` icon (muted) → *"NNW — no clouds (1000 mi checked)"*
 - History is in-memory only; does not persist across sessions
 - Maximum 10 history entries; oldest drops off when exceeded
 
