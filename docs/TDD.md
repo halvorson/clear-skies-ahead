@@ -263,7 +263,67 @@ return { searchMode, clearSkyFound: true, nearestClearMiles: roundToHalfMile(hig
 
 ---
 
-### 4.5 `permissions.ts` — Device Permissions
+### 4.5 `forecast.ts` — Temporal Wind Forecast
+
+```typescript
+interface ForecastResult {
+  eta: '15m' | '30m' | '1h' | '2h' | '3h' | '4h' | 'stable' | 'calm';
+  searchMode: 'find-clear' | 'find-clouds';
+}
+
+async function getForecast(
+  origin: LatLng,
+  windSpeedMph: number,
+  windDirectionDeg: number,
+  searchMode: 'find-clear' | 'find-clouds',
+): Promise<ForecastResult>
+```
+
+**Wind data extraction (in `weather.ts`):**
+- Extend the origin's gridpoints fetch to also read `windSpeed` and `windDirection` time-series
+- Select the same "nearest past timestamp" entry used for sky cover
+- `windSpeed` unit code is typically `wmoUnit:km_h-1` → convert to mph: `× 0.621371`
+- `windDirection` unit code is `wmoUnit:degree_(angle)` → use directly
+- Add `windSpeedMph: number` and `windDirectionDeg: number` to the origin data returned by `getSkyCover()` (or a new `getOriginData()` function)
+
+**Algorithm:**
+```
+if windSpeedMph < 3: return { eta: 'calm', searchMode }
+
+upwindBearing = windDirectionDeg  // wind FROM this direction = clouds approaching from here
+
+TIME_BUCKETS = [1, 2, 3, 4]  // hours
+for each hours in TIME_BUCKETS:
+  distance = windSpeedMph * hours
+  point = projectPoint(origin, upwindBearing, distance)
+  skyCover = await getSkyCover(point)
+  isTarget = (searchMode === 'find-clouds') ? !isClear(skyCover) : isClear(skyCover)
+  if isTarget:
+    // Refine: check 30m
+    distance30 = windSpeedMph * 0.5
+    skyCover30 = await getSkyCover(projectPoint(origin, upwindBearing, distance30))
+    if isTarget(skyCover30):
+      // Refine: check 15m
+      distance15 = windSpeedMph * 0.25
+      skyCover15 = await getSkyCover(projectPoint(origin, upwindBearing, distance15))
+      if isTarget(skyCover15): return { eta: '15m', searchMode }
+      return { eta: '30m', searchMode }
+    return { eta: '1h', searchMode }
+  // Otherwise continue to next hour bucket
+  // Map hours → '2h' | '3h' | '4h' for matched bucket
+
+return { eta: 'stable', searchMode }
+```
+
+**Notes:**
+- Only called when `searchMode === 'find-clouds'` and `clearSkyFound === true` (sunny origin, clouds found) — caller is responsible for this gate
+- Only refines to sub-hour when the 1h bucket matches — 2h/3h/4h are not refined
+- `getSkyCover()` errors are caught silently; on any error the forecast returns `{ eta: 'stable' }` (conservative fallback)
+- Out-of-coverage points at the projected location are treated as no-transition (skip that bucket)
+
+---
+
+### 4.6 `permissions.ts` — Device Permissions
 
 **`requestGeolocation(): Promise<GeolocationCoordinates>`**
 - `navigator.geolocation.getCurrentPosition` with `{ enableHighAccuracy: true, timeout: 10000 }`

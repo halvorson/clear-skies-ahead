@@ -149,6 +149,36 @@ The loading screen mirrors the result screen layout for visual continuity:
 - History is in-memory only; does not persist across sessions
 - Maximum 10 history entries; oldest drops off when exceeded
 
+### 4.8 Temporal Wind Forecast — "How long will it be sunny?"
+
+After a directional search completes, the app also estimates **how long the current sky conditions will last** by tracing upwind from the user's location.
+
+**When it runs:** Only when the origin is clear (`find-clouds` mode) **and** the cloud boundary was found (`clearSkyFound: true`). Skipped for all other outcomes.
+
+**Algorithm:**
+1. Extract wind speed (mph) and wind direction (degrees, meteorological: direction wind is FROM) from the NWS gridpoints response already fetched at the origin
+2. Project upwind points at 1h, 2h, 3h, 4h of wind travel distance (`windSpeed × time`)
+3. Check sky cover at each projected point in order
+4. If a sky-cover transition is detected at 1h, refine to 30m; if still detected at 30m, refine to 15m
+5. Report the earliest time bucket where conditions change
+
+**Displayed time buckets:** 15m, 30m, 1h, 2h, 3h, 4h
+
+**Edge cases:**
+- Wind speed < 3 mph → skip forecast, display *"Wind too calm to estimate"*
+- No transition within 4h → display *"Sky looks stable for 4+ hours"*
+- Forecast errors → fail silently (omit the secondary line)
+
+**Display:** A **"How long will it be sunny?"** button appears on the result card (find-clouds + clouds found only). Tapping it:
+1. Shows an inline spinner while the forecast runs
+2. Replaces the button with the result:
+   - *"Clouds arrive in ~2 hours"*
+   - *"Sky looks stable for 4+ hours"*
+   - *"Wind too calm to estimate"*
+3. On error: shows *"Forecast unavailable"* — no retry
+
+The **"Try a new direction"** CTA is unaffected and always visible.
+
 ### 4.7 Analytics
 
 Firebase Analytics events:
@@ -182,6 +212,8 @@ The debug panel on error screens is enabled by `import.meta.env.DEV` — it appe
 **F2 — Map view:** A visual display of the search path. `SearchResult.points` already returns every checked coordinate and sky cover value — the frontend just needs to render it.
 
 **F3 — Result caching:** If a new search is within 10 degrees of a recent search and within 2 minutes, return the cached result. Cache key: `{bearingBucket: round(bearing/10)*10, timeBucket: floor(Date.now()/120000)}`.
+
+**F4 — Temporal wind forecast (planned for v1.2.0):** See Section 4.8. Estimates how long the current sky conditions will last by projecting upwind along the current wind vector.
 
 ---
 

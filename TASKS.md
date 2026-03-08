@@ -20,6 +20,93 @@ Read TASKS.md in the repo root. For every task listed under "Pending Tasks", imp
 
 ## Pending Tasks
 
+### Task 32 — UX Refresh
+`[ ]`
+**What:** A full visual and interaction refresh. The current UI is functional but generic. This task makes the experience feel purposeful — different when it's sunny vs. cloudy, smooth transitions between states, and copy that matches the product's personality.
+
+**Use the Anthropic Frontend Design skill** (`/frontend-design` or install from https://github.com/anthropics/skills) to guide the visual direction before writing code.
+
+**Visual differentiation by sky state:**
+- When the origin is clear (find-clouds mode): warm, golden/yellow-green palette, sun-forward imagery, bright and open feel
+- When the origin is cloudy (find-clear mode): cool, blue-grey palette, overcast feel that "lifts" to sunshine on the result
+- Landing screen: stays neutral until sky state is known; can default to a split treatment or a simple welcoming tone
+- Result card: background or accent color shifts to match the outcome (sunny result = warm; cloudy result = cool-grey)
+
+**Page transitions:**
+- Current issue: screens snap in/out with no transition — jarring on a phone
+- Add a simple CSS fade or slide transition when switching between Landing → Loading → Result/Error
+- Use `requestAnimationFrame` or CSS `@starting-style` / `transition` on `.screen` visibility
+- Transitions should take ~200ms — fast enough to not feel sluggish, slow enough to feel smooth
+- The layout should NOT reflow or jump during transitions; preserve scroll position
+
+**History with rotating compasses:**
+- Confirmed working in v1.1.0, but review the visual weight — icons should feel alive, not like noise
+- Ensure history section animates in smoothly on result/error screen load (stagger or fade-in)
+
+**Progress during search (Loading screen):**
+- Confirm no layout jumping as rows populate
+- The status text ("Cloudy here — finding clear sky…") should animate in after the origin check
+- Consider a subtle pulse or shimmer on the in-progress row
+
+**Copy updates:**
+- Landing CTA: currently "Find Clear Sky" — update to something that works for both modes. Options: "Check the sky", "Read the sky", "What's coming?", or keep it. Michael's call, but make a recommendation.
+- Result headlines: review all 5 states for tone — should feel like a friend telling you, not a data readout
+- History labels: make sure they're scannable at a glance
+- No-result and error states: warmer, less robotic copy
+
+**Files likely touched:** `src/styles.css`, `src/ui/LandingScreen.ts`, `src/ui/LoadingScreen.ts`, `src/ui/ResultScreen.ts`, `src/ui/ErrorScreen.ts`, `src/ui/historyHelpers.ts`
+
+---
+
+### Task 31 — "How long will it be sunny?" — temporal wind forecast
+`[ ]`
+**What:** A new feature that answers "how long until the sky changes?" by tracing upwind along the wind direction at the user's current location. If it's currently clear, it estimates when clouds will arrive. If it's currently cloudy, it estimates when clearing will arrive.
+
+This feature **only runs when the search is in `find-clouds` mode AND clouds were found** (`clearSkyFound: true`). In other words: it's sunny where you are, and the app found where the clouds begin. All other outcomes (cloudy origin, no clouds found within 1000 miles, out of coverage) skip the forecast entirely — there's no point estimating how long clear sky lasts if it's already overcast.
+
+**Algorithm:**
+1. During the existing NWS gridpoints fetch at the origin (already happens in Phase 0), also extract `windSpeed` (mph) and `windDirection` (degrees — meteorological convention: direction wind is blowing FROM)
+2. The "upwind bearing" = `windDirection` (clouds/clearing approach from the direction wind is coming from)
+3. Project points at 15m, 30m, 1h, 2h, 3h, 4h worth of wind travel: `distance = windSpeed_mph * time_hours`
+4. For each time bucket in order, check sky cover at the projected upwind point
+5. If a cloud-boundary is found (sky cover flips from clear→cloudy or cloudy→clear), report that time bucket as the ETA
+6. Time buckets and resolution rules:
+   - Start at 1h, 2h, 3h, 4h
+   - If clouds/clearing detected at 1h: refine to 30m
+   - If still detected at 30m: refine to 15m
+   - Minimum reportable time: 15 minutes
+7. If no change detected within 4 hours: report "sky looks stable for the next 4 hours"
+8. If wind speed is < 3 mph: skip the forecast (wind too calm to project meaningful movement), show "wind too calm to estimate"
+
+**NWS data extraction:**
+- `windSpeed` and `windDirection` are time-series arrays in the gridpoints response (same structure as `skyCover`)
+- Use the same "nearest past timestamp" selection logic already used for sky cover
+- `windSpeed` unit is typically `wmoUnit:km_h-1` — convert to mph: `× 0.621371`
+- `windDirection` unit is `wmoUnit:degree_(angle)` — use directly
+
+**New module: `src/core/forecast.ts`**
+- `getForecast(origin, windSpeedMph, windDirectionDeg): Promise<ForecastResult>`
+- Internally calls `getSkyCover()` (from `weather.ts`) at projected upwind points
+- Returns: `{ eta: '15m' | '30m' | '1h' | '2h' | '3h' | '4h' | 'stable' | 'calm', searchMode: 'find-clear' | 'find-clouds' }`
+
+**`src/core/weather.ts` changes:**
+- `getSkyCover()` already fetches gridpoints data; extend return value to include `windSpeedKph` and `windDirectionDeg` at the origin (only needed for the origin point, not outward search points)
+- Or add a separate `getOriginData()` that returns `{ skyCoverPercent, windSpeedKph, windDirectionDeg }` — avoids touching outward search logic
+
+**Result display:**
+- On the result card (find-clouds + found state only), show a **"How long will it be sunny?"** button below the headline
+- Tapping it kicks off `getForecast()`, shows an inline spinner while loading, then replaces the button with the result text: *"Clouds arrive in ~2 hours"*, *"Sky looks stable for 4+ hours"*, *"Wind too calm to estimate"*, etc.
+- The "Try a new direction" CTA remains unchanged below
+- On error: replace button with a muted *"Forecast unavailable"* — no retry
+
+**Tests:** Add `src/core/forecast.test.ts` covering: calm wind suppression, time bucket resolution, refinement from 1h→30m→15m, stable-sky output.
+
+**README + docs:** Update README and PRD/TDD when this task is marked complete (see PRD Section 4.8 and TDD Section 4.5 added in this commit).
+
+**Files:** `src/core/weather.ts`, `src/core/forecast.ts` (new), `src/types.ts`, `src/ui/ResultScreen.ts`, `src/core/forecast.test.ts` (new)
+
+---
+
 ### Task 27 — v1.1.0: Bidirectional search — types and core engine
 `[x]` Added `searchMode`/`originSkyCoverPercent` to `SearchResult`; `searchMode` to `HistoryEntry`. Rewrote `search.ts` to check origin first, flip to `find-clouds` when clear, invert Phase 1 + Phase 2 target condition per mode. Updated `search.test.ts` (27 tests, all passing). PR #22.
 **What:** Extend the search engine so it auto-detects whether the user is standing in clear sky or clouds, then searches in the appropriate direction. Clear origin → search for first cloudy point ("find-clouds" mode). Cloudy origin → search for first clear point ("find-clear" mode, existing behavior).
