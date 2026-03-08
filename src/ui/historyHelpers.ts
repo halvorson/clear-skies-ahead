@@ -71,11 +71,11 @@ export function buildHistorySection(history: HistoryEntry[]): string {
       if (entry.searchMode === 'find-clouds') {
         // No clouds found — sunny all the way
         iconClass = 'history-icon history-icon--sunny';
-        text = `${entry.compassLabel} — no clouds for 1,000 mi`;
+        text = `${entry.compassLabel} — no clouds for ${entry.distanceMiles} mi`;
       } else {
         // No clear sky found — cloudy all the way
         iconClass = 'history-icon history-icon--cloudy';
-        text = `${entry.compassLabel} — no clear sky for 1,000 mi`;
+        text = `${entry.compassLabel} — no clear sky for ${entry.distanceMiles} mi`;
       }
     }
 
