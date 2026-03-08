@@ -21,17 +21,31 @@ beforeEach(() => {
 });
 
 describe('runSearch', () => {
-  it('returns clearSkyFound:true with 0 distance when clear at origin (first check)', async () => {
-    mockGetSkyCover.mockResolvedValue(0); // all clear
+  it('when origin is clear, switches to find-clouds mode; all-clear returns clearSkyFound:false', async () => {
+    mockGetSkyCover.mockResolvedValue(0); // all 0% = all clear → never find clouds
     const result = await runSearch(ORIGIN, BEARING);
-    expect(result.clearSkyFound).toBe(true);
+    expect(result.searchMode).toBe('find-clouds');
+    expect(result.clearSkyFound).toBe(false);
     expect(result.outOfCoverage).toBe(false);
-    expect(result.nearestClearMiles).toBe(0); // clear right here
+    expect(result.originSkyCoverPercent).toBe(0);
+  });
+
+  it('find-clouds mode: finds first cloudy point and returns correct distance', async () => {
+    mockGetSkyCover
+      .mockResolvedValueOnce(0)    // 0mi: clear → mode=find-clouds
+      .mockResolvedValueOnce(0)    // 1mi: clear, not target
+      .mockResolvedValue(100);     // 2mi+: cloudy → target found
+    const result = await runSearch(ORIGIN, BEARING);
+    expect(result.searchMode).toBe('find-clouds');
+    expect(result.clearSkyFound).toBe(true);
+    expect(result.nearestClearMiles).toBeGreaterThan(0);
+    expect(result.nearestClearMiles % 0.5).toBe(0); // rounded to nearest 0.5
   });
 
   it('returns clearSkyFound:false, outOfCoverage:false when all points are cloudy', async () => {
     mockGetSkyCover.mockResolvedValue(100);
     const result = await runSearch(ORIGIN, BEARING);
+    expect(result.searchMode).toBe('find-clear');
     expect(result.clearSkyFound).toBe(false);
     expect(result.outOfCoverage).toBe(false);
   });
@@ -45,7 +59,7 @@ describe('runSearch', () => {
 
   it('returns outOfCoverage:true when search hits OOC even after cloudy points', async () => {
     mockGetSkyCover
-      .mockResolvedValueOnce(100)            // 0mi: cloudy
+      .mockResolvedValueOnce(100)            // 0mi: cloudy → mode=find-clear
       .mockRejectedValue(new OutOfCoverageError()); // 1mi+: out-of-coverage → break
     const result = await runSearch(ORIGIN, BEARING);
     expect(result.clearSkyFound).toBe(false);
@@ -74,8 +88,8 @@ describe('runSearch', () => {
 
   it('narrows result via binary search to a value between 32 and 64 miles', async () => {
     mockGetSkyCover
-      // Phase 1: indices 0-7 cloudy, index 8 (64mi) clear → firstClearIndex=8
-      .mockResolvedValueOnce(100) // 0mi:  cloudy
+      // Phase 1: 0mi cloudy → find-clear mode; indices 1-6 cloudy; index 7 (64mi) clear → firstTargetIndex=7
+      .mockResolvedValueOnce(100) // 0mi:  cloudy (origin → find-clear)
       .mockResolvedValueOnce(100) // 1mi:  cloudy
       .mockResolvedValueOnce(100) // 2mi:  cloudy
       .mockResolvedValueOnce(100) // 4mi:  cloudy
@@ -91,6 +105,7 @@ describe('runSearch', () => {
 
     const result = await runSearch(ORIGIN, BEARING);
     expect(result.clearSkyFound).toBe(true);
+    expect(result.searchMode).toBe('find-clear');
     expect(result.nearestClearMiles).toBeGreaterThan(32);
     expect(result.nearestClearMiles).toBeLessThanOrEqual(64);
     expect(result.nearestClearMiles % 0.5).toBe(0); // rounded to nearest 0.5

@@ -13,23 +13,35 @@ function buildResultCard(result: SearchResult): string {
     `;
   }
 
+  if (result.searchMode === 'find-clouds') {
+    if (!result.clearSkyFound) {
+      return `
+        <div class="no-result-card">
+          <p class="no-result-headline">Clear sky extends beyond 1,000 miles ${result.compassLabel}</p>
+          <p class="no-result-subtext">No clouds in this direction — enjoy the sunshine.</p>
+        </div>
+      `;
+    }
+
+    // Clouds found — point arrow toward the cloud boundary
+    const rotation = result.bearingDegrees - 45;
+    return `
+      <div class="result-card">
+        <div class="result-compass" aria-hidden="true">
+          <span class="material-symbols-rounded" style="transform: rotate(${rotation}deg)">near_me</span>
+        </div>
+        <p class="result-headline">Clouds start ${result.nearestClearMiles} miles ${result.compassLabel} of you</p>
+        ${result.resultLocation ? `<p class="no-result-subtext" style="margin-top:4px">near ${result.resultLocation.city}, ${result.resultLocation.state}</p>` : ''}
+      </div>
+    `;
+  }
+
+  // find-clear mode
   if (!result.clearSkyFound) {
     return `
       <div class="no-result-card">
         <p class="no-result-headline">No clear sky within 1,000 miles ${result.compassLabel}</p>
         <p class="no-result-subtext">Try scanning a different direction.</p>
-      </div>
-    `;
-  }
-
-  if (result.nearestClearMiles === 0) {
-    return `
-      <div class="result-card">
-        <div class="result-compass" aria-hidden="true">
-          <span class="material-symbols-rounded">wb_sunny</span>
-        </div>
-        <p class="result-headline">It's already clear where you are.</p>
-        <p class="no-result-subtext" style="margin-top:4px">You literally could have just looked up. You're welcome.</p>
       </div>
     `;
   }

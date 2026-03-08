@@ -17,11 +17,15 @@ export interface SearchPoint {
 
 /** Final result returned by runSearch(). */
 export interface SearchResult {
+  /** Whether the search was looking for clear sky or for clouds (determined by origin sky cover). */
+  searchMode: 'find-clear' | 'find-clouds';
+  /** Sky cover % at the user's current location. -1 if origin was out of NWS coverage. */
+  originSkyCoverPercent: number;
   /** True if clear sky was found. False means all checked points were cloudy/out-of-coverage. */
   clearSkyFound: boolean;
   /** True when every checked point was outside NWS coverage (ocean, Canada, Mexico). Implies clearSkyFound is false. */
   outOfCoverage: boolean;
-  /** Distance to nearest clear sky, rounded to nearest 0.5 miles. Only meaningful when clearSkyFound is true. */
+  /** Distance to the nearest sky-cover transition (cloudy→clear or clear→cloudy), rounded to nearest 0.5 miles. Only meaningful when clearSkyFound is true. */
   nearestClearMiles: number;
   /** Exact bearing used for the search (raw device reading, not rounded). */
   bearingDegrees: number;
@@ -38,6 +42,8 @@ export interface SearchResult {
 
 /** One entry in the in-session search history list. */
 export interface HistoryEntry {
+  /** Whether this search was looking for clear sky or for clouds. */
+  searchMode: 'find-clear' | 'find-clouds';
   compassLabel: string;
   clearSkyFound: boolean;
   outOfCoverage: boolean;
