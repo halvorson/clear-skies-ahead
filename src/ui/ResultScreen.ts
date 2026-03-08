@@ -2,13 +2,20 @@ import '@material/web/button/filled-button.js';
 import type { SearchResult, HistoryEntry } from '../types';
 import { buildHistorySection, startHistoryIconCompass } from './historyHelpers';
 
+function heroCardClass(result: SearchResult): string {
+  if (result.outOfCoverage || !result.clearSkyFound) return 'hero-card--muted';
+  if (result.searchMode === 'find-clouds') return 'hero-card--found-clouds';
+  return 'hero-card--found-clear';
+}
+
 function buildResultCard(result: SearchResult): string {
   if (result.outOfCoverage) {
     const firstOoc = Math.min(...result.points.filter(p => p.skyCoverPercent < 0).map(p => p.distanceMiles));
     return `
-      <div class="no-result-card">
-        <p class="no-result-headline">Ran out of coverage at ${firstOoc} miles</p>
-        <p class="no-result-subtext">This direction heads over the ocean, into Canada, or into Mexico. Try a different direction.</p>
+      <div class="hero-card hero-card--muted">
+        <span class="material-symbols-rounded hero-icon" aria-hidden="true">public_off</span>
+        <p class="hero-headline">Ran out of coverage at ${firstOoc} miles</p>
+        <p class="hero-subtext">This direction heads over the ocean, into Canada, or into Mexico. Try a different direction.</p>
       </div>
     `;
   }
@@ -16,22 +23,24 @@ function buildResultCard(result: SearchResult): string {
   if (result.searchMode === 'find-clouds') {
     if (!result.clearSkyFound) {
       return `
-        <div class="no-result-card">
-          <p class="no-result-headline">Clear sky extends beyond 1,000 miles ${result.compassLabel}</p>
-          <p class="no-result-subtext">No clouds in this direction — enjoy the sunshine.</p>
+        <div class="hero-card hero-card--sky">
+          <span class="material-symbols-rounded hero-icon" aria-hidden="true">wb_sunny</span>
+          <p class="hero-headline">Clear sky extends beyond 1,000 miles ${result.compassLabel}</p>
+          <p class="hero-subtext">No clouds in this direction — enjoy the sunshine.</p>
         </div>
       `;
     }
 
-    // Clouds found — point arrow toward the cloud boundary
+    // Found cloud boundary — origin was sunny
     const rotation = result.bearingDegrees - 45;
     return `
-      <div class="result-card">
-        <div class="result-compass" aria-hidden="true">
+      <div class="hero-card hero-card--found-clouds">
+        <div class="hero-compass result-compass" aria-hidden="true">
           <span class="material-symbols-rounded" style="transform: rotate(${rotation}deg)">near_me</span>
         </div>
-        <p class="result-headline">Clouds start ${result.nearestClearMiles} miles ${result.compassLabel} of you</p>
-        ${result.resultLocation ? `<p class="no-result-subtext" style="margin-top:4px">near ${result.resultLocation.city}, ${result.resultLocation.state}</p>` : ''}
+        <p class="hero-distance">${result.nearestClearMiles} mi</p>
+        <p class="hero-direction">${result.compassLabel}</p>
+        ${result.resultLocation ? `<p class="hero-caption">near ${result.resultLocation.city}, ${result.resultLocation.state}</p>` : ''}
       </div>
     `;
   }
@@ -39,23 +48,24 @@ function buildResultCard(result: SearchResult): string {
   // find-clear mode
   if (!result.clearSkyFound) {
     return `
-      <div class="no-result-card">
-        <p class="no-result-headline">No clear sky within 1,000 miles ${result.compassLabel}</p>
-        <p class="no-result-subtext">Try scanning a different direction.</p>
+      <div class="hero-card hero-card--muted">
+        <span class="material-symbols-rounded hero-icon" aria-hidden="true">cloud</span>
+        <p class="hero-headline">No clear sky within 1,000 miles ${result.compassLabel}</p>
+        <p class="hero-subtext">Try scanning a different direction.</p>
       </div>
     `;
   }
 
-  // Rotate the near_me icon (which points NE at 0°) by bearing - 45° to point in the right direction
+  // Found clear sky — origin was cloudy
   const rotation = result.bearingDegrees - 45;
-
   return `
-    <div class="result-card">
-      <div class="result-compass" aria-hidden="true">
+    <div class="hero-card hero-card--found-clear">
+      <div class="hero-compass result-compass" aria-hidden="true">
         <span class="material-symbols-rounded" style="transform: rotate(${rotation}deg)">near_me</span>
       </div>
-      <p class="result-headline">Sky is clear ${result.nearestClearMiles} miles ${result.compassLabel} of you</p>
-      ${result.resultLocation ? `<p class="no-result-subtext" style="margin-top:4px">near ${result.resultLocation.city}, ${result.resultLocation.state}</p>` : ''}
+      <p class="hero-distance">${result.nearestClearMiles} mi</p>
+      <p class="hero-direction">${result.compassLabel}</p>
+      ${result.resultLocation ? `<p class="hero-caption">near ${result.resultLocation.city}, ${result.resultLocation.state}</p>` : ''}
     </div>
   `;
 }
@@ -78,11 +88,7 @@ export class ResultScreen {
     this.el.className = 'screen screen--result';
 
     this.el.innerHTML = `
-      <div class="screen-header">
-        <span class="material-symbols-rounded screen-icon" aria-hidden="true">wb_sunny</span>
-        <h1 class="app-title">Clear Skies Ahead</h1>
-      </div>
-      <div class="screen-content">
+      <div class="screen-content" style="width:100%;display:contents">
         ${buildResultCard(result)}
         <md-filled-button class="cta-fab result-btn" has-icon>
           <span slot="icon" class="material-symbols-rounded">my_location</span>
@@ -102,7 +108,6 @@ export class ResultScreen {
 
   private startCompassListener(): void {
     this.orientationHandler = (event: DeviceOrientationEvent) => {
-      // Deduplicate: once we know which event fires, ignore the other
       const eventType = event.type;
       if (this.activeOrientationEvent === null) {
         this.activeOrientationEvent = eventType;
@@ -110,7 +115,6 @@ export class ResultScreen {
         return;
       }
 
-      // Extract heading: prefer webkitCompassHeading (iOS), else derive from alpha
       let heading: number | null = null;
       if ('webkitCompassHeading' in event && typeof (event as any).webkitCompassHeading === 'number') {
         heading = (event as any).webkitCompassHeading as number;
@@ -120,10 +124,8 @@ export class ResultScreen {
 
       if (heading === null) return;
 
-      // Result compass: point toward clear sky relative to current heading
       const resultRotation = (this.resultBearing - heading + 360) % 360 - 45;
 
-      // Update result-card compass icon
       const compassIcon = this.el.querySelector('.result-compass .material-symbols-rounded') as HTMLElement | null;
       if (compassIcon) {
         compassIcon.style.transform = `rotate(${resultRotation}deg)`;

@@ -4,6 +4,7 @@ import { buildHistorySection } from './historyHelpers';
 import { bearingToCompass } from '../core/geo';
 
 interface ErrorConfig {
+  icon: string;
   heading: string;
   body: string;
 }
@@ -12,16 +13,19 @@ function getErrorConfig(errorType: PermissionType | 'unknown'): ErrorConfig {
   switch (errorType) {
     case 'location':
       return {
+        icon: 'location_off',
         heading: 'Location access required',
         body: 'Please enable location access in your browser settings and try again.',
       };
     case 'compass':
       return {
+        icon: 'explore_off',
         heading: 'Compass not available',
         body: 'This app requires compass hardware. It may not be supported on your device or browser.',
       };
     case 'unknown':
       return {
+        icon: 'cloud_off',
         heading: 'Something went wrong',
         body: 'Please try again.',
       };
@@ -133,22 +137,17 @@ export class ErrorScreen {
       : '';
 
     this.el.innerHTML = `
-      <div class="screen-header">
-        <span class="material-symbols-rounded screen-icon" aria-hidden="true">wb_sunny</span>
-        <h1 class="app-title">Clear Skies Ahead</h1>
+      <div class="hero-card hero-card--muted">
+        <span class="material-symbols-rounded hero-icon" aria-hidden="true">${config.icon}</span>
+        <p class="hero-headline">${config.heading}</p>
+        <p class="hero-subtext">${config.body}</p>
       </div>
-      <div class="screen-content">
-        <div class="no-result-card">
-          <p class="no-result-headline">${config.heading}</p>
-          <p class="no-result-subtext">${config.body}</p>
-        </div>
-        <md-filled-button class="cta-fab error-retry-btn" has-icon>
-          <span slot="icon" class="material-symbols-rounded">my_location</span>
-          Start over
-        </md-filled-button>
-        ${buildHistorySection(history)}
-        ${debugHtml}
-      </div>
+      <md-filled-button class="cta-fab error-retry-btn" has-icon>
+        <span slot="icon" class="material-symbols-rounded">my_location</span>
+        Start over
+      </md-filled-button>
+      ${buildHistorySection(history)}
+      ${debugHtml}
     `;
     container.appendChild(this.el);
 

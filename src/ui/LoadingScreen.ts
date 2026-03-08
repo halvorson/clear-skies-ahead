@@ -15,26 +15,21 @@ export class LoadingScreen {
     this.el = document.createElement('div');
     this.el.className = 'screen screen--loading';
     this.el.innerHTML = `
-      <div class="screen-header">
-        <span class="material-symbols-rounded screen-icon screen-icon--spinning" aria-hidden="true">wb_sunny</span>
-        <h1 class="app-title">Clear Skies Ahead</h1>
+      <div class="hero-card hero-card--sky">
+        <span class="material-symbols-rounded hero-icon hero-icon--spinning" aria-hidden="true">wb_sunny</span>
+        <div class="loading-spinner" role="progressbar" aria-label="Searching"></div>
+        <p class="loading-status"></p>
       </div>
-      <div class="screen-content">
-        <div class="result-card">
-          <div class="loading-spinner" role="progressbar" aria-label="Searching"></div>
-          <p class="loading-status"></p>
-        </div>
-        <md-filled-button class="cta-fab" disabled has-icon>
-          <span slot="icon" class="material-symbols-rounded">my_location</span>
-          Try a new direction
-        </md-filled-button>
-        <div class="history-section">
-          <hr class="history-divider" />
-          <span class="history-label">Searching…</span>
-          <div class="loading-log"></div>
-        </div>
-        ${buildHistorySection(history)}
+      <md-filled-button class="cta-fab" disabled has-icon>
+        <span slot="icon" class="material-symbols-rounded">my_location</span>
+        Try a new direction
+      </md-filled-button>
+      <div class="history-section">
+        <hr class="history-divider" />
+        <span class="history-label">Searching…</span>
+        <div class="loading-log"></div>
       </div>
+      ${buildHistorySection(history)}
     `;
     container.appendChild(this.el);
 
@@ -55,7 +50,7 @@ export class LoadingScreen {
     row.textContent = text;
     row.style.opacity = '0.4';
     row.style.fontSize = '11px';
-    row.style.fontWeight = '500';
+    row.style.fontWeight = '600';
     row.style.textTransform = 'uppercase';
     row.style.letterSpacing = '1px';
     row.style.paddingTop = '2px';
@@ -71,7 +66,7 @@ export class LoadingScreen {
       : `${distanceMiles.toFixed(1)} mi`;
 
     const row = document.createElement('div');
-    row.textContent = `⏳  ${dist} — checking…`;
+    row.innerHTML = `<span class="material-symbols-rounded log-icon">hourglass_empty</span>  ${dist} — checking…`;
     row.style.opacity = '0.5';
     row.style.fontStyle = 'italic';
     this.logEl.prepend(row);
@@ -82,14 +77,15 @@ export class LoadingScreen {
   /** Phase 2: fill in the result on a row created by startEntry(). */
   resolveEntry(row: HTMLElement, skyCoverPercent: number, isClear: boolean): void {
     const distText = row.textContent?.match(/[\d.]+\s*mi/)?.[0] ?? '';
-    const icon = isClear ? '☀' : '☁';
 
     if (skyCoverPercent < 0) {
-      row.textContent = `—  ${distText} — out of coverage`;
+      row.innerHTML = `<span class="material-symbols-rounded log-icon">remove</span>  ${distText} — out of coverage`;
       row.style.opacity = '0.4';
       row.style.fontStyle = 'italic';
-      return; // do not set hasLoggedEntry or add placeholder
+      return;
     }
+
+    const iconName = isClear ? 'wb_sunny' : 'cloud';
 
     let label: string;
     if (isClear) {
@@ -98,7 +94,7 @@ export class LoadingScreen {
       label = this.lastLoggedIsClear === false ? `still cloudy (${skyCoverPercent}%)` : `cloudy (${skyCoverPercent}%)`;
     }
 
-    row.textContent = `${icon}  ${distText} — ${label}`;
+    row.innerHTML = `<span class="material-symbols-rounded log-icon">${iconName}</span>  ${distText} — ${label}`;
     row.style.opacity = isClear ? '1' : '0.55';
     row.style.fontStyle = '';
 
