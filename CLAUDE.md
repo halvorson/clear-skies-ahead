@@ -2,9 +2,9 @@
 
 ## What this app does
 
-clear-skies-ahead is a progressive web app (PWA) that answers one question: **"How far do I need to travel in the direction I'm facing to find clear sky?"**
+clear-skies-ahead is a progressive web app (PWA) that answers one question: **"How far do I need to travel in the direction I'm facing to reach the edge of the current sky conditions?"** If it's cloudy at your location, the app finds the nearest clear sky. If it's sunny, it finds where the clouds begin.
 
-The user taps a button. The app reads their GPS location and phone compass bearing, searches outward along that bearing using an exponential backoff strategy, and returns a plain-English result: *"Clear sky is 5.5 miles NNW of you."*
+The user taps a button. The app reads their GPS location and phone compass bearing, checks sky cover at the origin to determine search mode, then searches outward along that bearing using an exponential expansion strategy, and returns a plain-English result: *"Clear sky is 5.5 miles NNW of you."* or *"Clouds start 12 miles NNE of you."*
 
 Full product spec: [`docs/PRD.md`](docs/PRD.md)  
 Full technical design: [`docs/TDD.md`](docs/TDD.md)
@@ -80,7 +80,8 @@ clear-skies-ahead/
 - **No auth, no accounts.** Fully anonymous. History is in-memory for the session only.
 - **NWS API is US-only.** Non-US users are out of scope for MVP — no error handling for this case yet.
 - **"Clear sky" = ≤50% cloud cover** (NWS SKC, CLR, FEW, or SCT classifications).
-- **Search algorithm:** Exponential expansion (1, 2, 4, 8 ... 1000 miles) until clear sky is found, then binary search narrowing (max 4 halvings, stopping when gap ≤ 1 mile). Cap at 1000 miles.
+- **Search mode:** Auto-detected from origin sky cover. Clear origin (≤50%) → `find-clouds` mode (search for clouds). Cloudy origin (>50%) → `find-clear` mode (search for clear sky).
+- **Search algorithm:** Exponential expansion (1, 2, 4, 8 ... 1000 miles) until the target is found, then binary search narrowing (max 4 halvings, stopping when gap ≤ 1 mile). Cap at 1000 miles.
 - **Compass rounding:** Raw device bearing is used for all math. Display rounds to nearest 16-point compass label only at render time.
 - **Result precision:** Nearest 0.5 miles (e.g., 5.5 miles, not 5.48).
 - **`SearchResult.points`** collects every checked coordinate + sky cover value — this is scaffolding for the future map feature (F2 in PRD). Don't remove it.
@@ -90,21 +91,27 @@ clear-skies-ahead/
 ## Search algorithm detail
 
 ```
+Phase 0 — Origin check:
+  skyCover = NWS API at user's location (distance 0)
+  searchMode = isClear(skyCover) ? 'find-clouds' : 'find-clear'
+
 Phase 1 — Exponential expansion:
   distances = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1000]
   for each distance:
     project a GPS point at that distance along the exact bearing
     call NWS API to get sky cover %
-    if skyCover <= 50% → clear, break and record firstClearIndex
+    isTarget = (searchMode === 'find-clear') ? isClear(sky) : !isClear(sky)
+    if isTarget → target found, break and record firstTargetIndex
 
 Phase 2 — Binary narrowing:
-  low = distances[firstClearIndex - 2]  (or 0 if index < 2)
-  high = distances[firstClearIndex]
+  low = distances[firstTargetIndex - 2]  (or 0 if index < 2)
+  high = distances[firstTargetIndex]
   halvings = 0
   while halvings < 4 AND (high - low) > 1:
     halvings++
     mid = (low + high) / 2
-    if isClear(mid) → high = mid
+    isTarget = (searchMode === 'find-clear') ? isClear(mid) : !isClear(mid)
+    if isTarget → high = mid
     else → low = mid
   result = round to nearest 0.5
 ```
