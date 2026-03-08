@@ -20,6 +20,164 @@ Read TASKS.md in the repo root. For every task listed under "Pending Tasks", imp
 
 ## Pending Tasks
 
+### Task 27 — v1.1.0: Bidirectional search — types and core engine
+`[x]` Added `searchMode`/`originSkyCoverPercent` to `SearchResult`; `searchMode` to `HistoryEntry`. Rewrote `search.ts` to check origin first, flip to `find-clouds` when clear, invert Phase 1 + Phase 2 target condition per mode. Updated `search.test.ts` (27 tests, all passing). PR #22.
+**What:** Extend the search engine so it auto-detects whether the user is standing in clear sky or clouds, then searches in the appropriate direction. Clear origin → search for first cloudy point ("find-clouds" mode). Cloudy origin → search for first clear point ("find-clear" mode, existing behavior).
+
+**`src/types.ts`:**
+- Add `searchMode: 'find-clear' | 'find-clouds'` to `SearchResult`
+- Add `originSkyCoverPercent: number` to `SearchResult` (sky cover % at user's location; -1 if OOC)
+- Add `searchMode: 'find-clear' | 'find-clouds'` to `HistoryEntry`
+
+**`src/core/search.ts`:**
+- DISTANCES array stays `[0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1000]` — index 0 is the origin check
+- Remove the old "already-clear short-circuit" block (the `if (firstClearIndex === 0) return ...` block) — it is now obsolete
+- After getting sky cover at distance 0 (origin), determine `searchMode`:
+  - `isClear(originSky)` → `'find-clouds'`; else → `'find-clear'`
+  - If origin is OOC: default to `'find-clear'`
+- Continue the loop from index 1 onward; the "found" condition is mode-dependent:
+  - `find-clear`: found when `isClear(skyCoverPercent) === true`
+  - `find-clouds`: found when `isClear(skyCoverPercent) === false` (i.e., sky > 50%)
+- Phase 2 binary narrowing: invert direction for `find-clouds` mode:
+  - `find-clear`: `isTarget = isClear(sky)` → if isTarget: `high = mid`, else `low = mid`
+  - `find-clouds`: `isTarget = !isClear(sky)` → if isTarget: `high = mid`, else `low = mid`
+  - OOC in Phase 2: always `high = mid` (same as before for both modes)
+- Return `searchMode` and `originSkyCoverPercent` in ALL return paths (including the no-target-found path)
+- NOTE: `nearestClearMiles` is reused as "distance to the sky transition" in both modes — keep the name, just update the JSDoc comment to say "distance to the nearest sky-cover transition (clear→cloudy or cloudy→clear)"
+- `clearSkyFound` remains `true` when the target is found (whether that target is clear sky or clouds)
+
+**`src/core/search.test.ts`:**
+- Update test "returns clearSkyFound:true with 0 distance when clear at origin":
+  - `mockGetSkyCover.mockResolvedValue(0)` means all points are 0% (clear)
+  - Origin clear → mode=find-clouds; all outward points also clear → no clouds found
+  - New assertion: `result.searchMode === 'find-clouds'`, `result.clearSkyFound === false`, `result.outOfCoverage === false`
+  - Rename test: "when origin is clear, switches to find-clouds mode; all-clear → clearSkyFound:false"
+- Add test: "find-clouds mode: finds first cloudy point and returns correct distance"
+  - `mockGetSkyCover.mockResolvedValueOnce(0)` (0mi: clear → mode=find-clouds)
+  - then `.mockResolvedValueOnce(0)` (1mi: clear, not target)
+  - then `.mockResolvedValue(100)` (2mi+: cloudy → target found)
+  - Assert: `searchMode: 'find-clouds'`, `clearSkyFound: true`, `nearestClearMiles` to be a positive number rounded to 0.5
+- All other existing tests should continue to pass with the new code (verify: all-cloudy, all-OOC, OOC-after-cloudy, callback counts, binary-search-narrowing tests remain valid because they start with cloudy at origin → find-clear mode → same logic as before)
+
+**Files:** `src/types.ts`, `src/core/search.ts`, `src/core/search.test.ts`
+
+---
+
+### Task 28 — v1.1.0: Result screen for find-clouds mode
+`[x]` Updated `buildResultCard` with 5 states: OOC, find-clouds not found ("Clear sky extends beyond 1,000 miles"), find-clouds found ("Clouds start X miles [dir] of you"), find-clear not found, find-clear found. Removed obsolete `nearestClearMiles===0` card. PR #22.
+**What:** Add new result card states for when the app is in `find-clouds` mode (user is standing in clear sky).
+
+**`src/ui/ResultScreen.ts`:**
+In `buildResultCard(result: SearchResult)`, branch on `result.searchMode`:
+
+**For `find-clear` mode** — existing cards, unchanged EXCEPT:
+- Remove the `nearestClearMiles === 0` "It's already clear where you are" card (this case can no longer occur — clear at origin now flips to find-clouds mode). Replace with a defensive fallback that still renders a result card (in case it ever fires unexpectedly) — can keep a simplified version or just log a warning and show the clear-sky card.
+- All other find-clear states stay identical
+
+**For `find-clouds` mode** — new cards:
+- `outOfCoverage: true` → same OOC card as find-clear mode (NWS coverage ran out before we found clouds)
+- `clearSkyFound: false` (no clouds within 1,000 miles) → `no-result-card` with:
+  - Headline: `"Clear sky extends beyond 1,000 miles ${result.compassLabel}"`
+  - Subtext: `"No clouds in this direction — enjoy the sunshine."`
+- `clearSkyFound: true` (clouds found) → `result-card` with compass arrow + headline:
+  - Headline: `"Clouds start ${result.nearestClearMiles} miles ${result.compassLabel} of you"`
+  - Location subtext: same as find-clear — `near ${city}, ${state}` when `result.resultLocation` is present
+  - Compass arrow rotation: same formula as find-clear — `(result.bearingDegrees - 45)` initial, then `(resultBearing - heading + 360) % 360 - 45` live (arrow points toward the cloud boundary)
+
+**Files:** `src/ui/ResultScreen.ts`
+
+---
+
+### Task 29 — v1.1.0: App orchestration and history helpers for find-clouds mode
+`[x]` `App.ts`: passes `searchMode` to history; status text updates after origin check ("Clear here — finding where it gets cloudy…" / "Cloudy here — finding clear sky…"). `historyHelpers.ts`: find-clouds success → "clear for X mi"; find-clouds no-result → "no clouds (X mi)". PR #22.
+**What:** Wire `searchMode` into history and update App.ts loading status to reflect mode.
+
+**`src/ui/App.ts`:**
+- In `addToHistory()`: add `searchMode: result.searchMode` to the history entry object
+- In the `onProgress` callback wired to `runSearch()`: after resolving the pending row, check `if (miles === 0)` to update the loading status text:
+  ```
+  if (miles === 0) {
+    loading.setStatus(
+      clear
+        ? 'Clear here — finding where it gets cloudy…'
+        : 'Cloudy here — finding clear sky…'
+    );
+  }
+  ```
+  Place this AFTER calling `loading.resolveEntry(pendingRow, sky, clear)` so the row is resolved first.
+
+**`src/ui/historyHelpers.ts`:**
+In `buildHistorySection()`, update the history entry text rendering for the new mode.
+The current branching is: `outOfCoverage` → `clearSkyFound` → else. Extend it for `searchMode`:
+
+```
+if (entry.outOfCoverage) {
+  // unchanged for both modes
+  text = `${entry.compassLabel} — out of coverage at ${entry.distanceMiles} mi`;
+} else if (entry.clearSkyFound) {
+  if (entry.searchMode === 'find-clouds') {
+    // Found clouds: "NNW — clear for 5.5 mi"
+    text = `${entry.compassLabel} — clear for ${entry.distanceMiles} mi`;
+    iconClass = 'history-icon'; // green/primary color (same as clear-sky success)
+  } else {
+    // find-clear success — existing: "NNW — 5.5 mi (8% clouds)"
+    iconClass = 'history-icon';
+    const coverStr = entry.skyCoverPercent !== undefined ? ` (${entry.skyCoverPercent}% clouds)` : '';
+    text = `${entry.compassLabel} — ${entry.distanceMiles} mi${coverStr}`;
+  }
+} else {
+  if (entry.searchMode === 'find-clouds') {
+    // No clouds found: "NNW — no clouds (1000 mi)"
+    text = `${entry.compassLabel} — no clouds (${entry.distanceMiles} mi checked)`;
+    iconClass = 'history-icon history-icon--no-result';
+  } else {
+    // find-clear, no clear sky — existing: "NNW — no clear sky (1000 mi checked)"
+    iconClass = 'history-icon history-icon--no-result';
+    text = `${entry.compassLabel} — no clear sky (${entry.distanceMiles} mi checked)`;
+  }
+}
+```
+
+**Files:** `src/ui/App.ts`, `src/ui/historyHelpers.ts`
+
+---
+
+### Task 30 — v1.1.0: Docs, landing copy, README, and version bump
+`[x]` `package.json` → 1.1.0. Landing tagline updated for bidirectional UX. README updated. PRD/TDD/CLAUDE.md all updated with origin check, searchMode, and dual result states. PR #23.
+**What:** Update all documentation, the landing screen tagline, README, and bump the version to 1.1.0. This task runs in PARALLEL with tasks 27-29 (no file overlap).
+
+**`package.json`:** version `"1.0.4"` → `"1.1.0"`
+
+**`src/ui/LandingScreen.ts`:** Update the `app-tagline` paragraph:
+- Old: `"Point your phone in any direction and find out how far it is to clear sky. One tap, one answer."`
+- New: `"Point your phone in any direction. Cloudy? Find out how far to clear sky. Sunny? Find out where the clouds begin. One tap, one answer."`
+
+**`README.md`:** Update:
+- Change version number in first line to `v1.1.0`
+- Update "A progressive web app that answers one question…" to describe the bidirectional behavior: "A progressive web app that answers one question: **how far do I need to travel to reach the edge of the current sky conditions?** If you're under clouds, it finds the nearest clear sky. If you're in sunshine, it finds where the clouds begin."
+- In "How it works" section, update steps to reflect that the app first checks sky at your location, then searches in the appropriate direction
+
+**`docs/PRD.md`:** Update the following sections:
+- **Section 1 (Overview):** Update the one-question description to: "How far do I need to travel in the direction I'm facing to reach the edge of the current sky conditions?" and clarify: "If it's cloudy, the app finds the nearest clear sky. If it's sunny, it finds where the clouds begin."
+- **Section 4.3 (Search Algorithm):** After "Once permissions are granted..." add a new first step: "**Step 0 — Origin check:** Check sky cover at the user's current location. If clear (≤50%): search for the nearest cloudy point (`find-clouds` mode). If cloudy (>50%): search for the nearest clear point (`find-clear` mode, existing behavior)." — then describe both modes in Phase 1 and Phase 2.
+- **Section 4.4 (Loading Screen):** Mention that after the origin check, the status updates to "Clear here — finding where it gets cloudy…" or "Cloudy here — finding clear sky…"
+- **Section 4.5 (Result Display):** Add two new states for `find-clouds` mode: found-clouds card ("Clouds start X miles [dir] of you") and no-clouds card ("Clear sky extends beyond 1,000 miles [dir]")
+- **Section 4.6 (History):** Add `find-clouds` history entry formats: "NNW — clear for 5.5 mi" (found clouds) and "NNW — no clouds (1000 mi)" (no clouds found)
+
+**`docs/TDD.md`:** Update the following:
+- **Section 4.1 (types.ts):** Add `searchMode: 'find-clear' | 'find-clouds'` and `originSkyCoverPercent: number` to `SearchResult` interface; add `searchMode` to `HistoryEntry`
+- **Section 4.4 (search.ts):** Update the Phase 1 and Phase 2 pseudocode to show origin check and mode-dependent target condition. Add `onModeDetected` is not a separate callback — mode is inferred from origin check.
+- **Section 5 (UI Screens):** Update ResultScreen to describe 5 card states (outOfCoverage, find-clear-not-found, find-clouds-not-found, find-clear-found, find-clouds-found). Update LandingScreen tagline.
+
+**`CLAUDE.md`:** Update:
+- Top description: update "answers one question: **'How far do I need to travel in the direction I'm facing to find clear sky?'**" to: "answers one question: **'How far do I need to travel to reach the edge of the current sky conditions?'** If cloudy at your location, it finds the nearest clear sky. If clear (sunny), it finds where the clouds begin."
+- In `SearchResult.points` comment or Key architectural decisions: add that `searchMode` drives which direction the search is looking
+- Update the Search algorithm detail code block to show the origin check and mode detection
+
+**Files:** `package.json`, `src/ui/LandingScreen.ts`, `README.md`, `docs/PRD.md`, `docs/TDD.md`, `CLAUDE.md`
+
+---
+
 ### Task 18 — Add Vitest unit tests for core logic
 `[x]` Installed `vitest` dev dep; added `"test": "vitest run"` to `package.json`; created `src/core/geo.test.ts` (9 tests: all 16 compass labels, roundToHalfMile, projectPoint), `src/core/weather.test.ts` (10 tests: 404/missing-gridId/500-retry/time-slot-selection, isClear threshold), `src/core/search.test.ts` (7 tests: all-clear, all-cloudy, all-OOC, mixed OOC, onChecking/onProgress callbacks, -1 sentinel, binary narrowing). 26/26 passing.
 Add a focused unit test suite covering `src/core/geo.ts`, `src/core/search.ts`, and `src/core/weather.ts`. These three files contain all the logic-dense code where bugs have actually appeared. Skip the UI layer (`src/ui/`) — DOM-coupled tests have low ROI here.
