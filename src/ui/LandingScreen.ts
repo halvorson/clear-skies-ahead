@@ -10,7 +10,7 @@ export class LandingScreen {
       <div class="hero-card hero-card--sky">
         <span class="material-symbols-rounded hero-icon" aria-hidden="true">wb_sunny</span>
         <h1 class="app-title">Clear Skies Ahead</h1>
-        <p class="app-tagline">Point your phone in any direction. Cloudy? Find out how far to clear sky. Sunny? Find out where the clouds begin.</p>
+        <p class="app-tagline">Clear skies? Find the closest clouds. Cloudy? Find the nearest sun. Aim your phone and press the button to get started.</p>
       </div>
       <md-filled-button class="cta-fab landing-btn" has-icon>
         <span slot="icon" class="material-symbols-rounded">my_location</span>

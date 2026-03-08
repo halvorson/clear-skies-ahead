@@ -18,7 +18,7 @@ function buildResultCard(result: SearchResult): string {
       <div class="hero-card hero-card--muted">
         <span class="material-symbols-rounded hero-icon" aria-hidden="true">public_off</span>
         <p class="hero-headline">Ran out of coverage at ${firstOoc} miles</p>
-        <p class="hero-subtext">This direction heads over the ocean, into Canada, or into Mexico. Try a different direction.</p>
+        <p class="hero-subtext">This direction heads over the ocean or into a different country. Try again?</p>
       </div>
     `;
   }
@@ -29,7 +29,7 @@ function buildResultCard(result: SearchResult): string {
       return `
         <div class="hero-card hero-card--sunny">
           <span class="material-symbols-rounded hero-icon" aria-hidden="true">wb_sunny</span>
-          <p class="hero-headline">Clear sky extends beyond 1,000 miles ${result.compassLabel}</p>
+          <p class="hero-headline">No clouds for 1,000 miles ${result.compassLabel}</p>
           <p class="hero-subtext">No clouds in this direction — enjoy the sunshine.</p>
         </div>
       `;
@@ -55,7 +55,7 @@ function buildResultCard(result: SearchResult): string {
     return `
       <div class="hero-card hero-card--cloudy">
         <span class="material-symbols-rounded hero-icon" aria-hidden="true">cloud</span>
-        <p class="hero-headline">No clear sky within 1,000 miles ${result.compassLabel}</p>
+        <p class="hero-headline">No clear sky for 1,000 miles ${result.compassLabel}</p>
         <p class="hero-subtext">Try scanning a different direction.</p>
       </div>
     `;
