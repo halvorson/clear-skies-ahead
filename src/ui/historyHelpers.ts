@@ -55,7 +55,8 @@ export function buildHistorySection(history: HistoryEntry[]): string {
 
     if (entry.outOfCoverage) {
       iconClass = 'history-icon history-icon--no-result';
-      text = `${entry.compassLabel} — out of coverage at ${entry.distanceMiles} mi`;
+      const what = entry.searchMode === 'find-clouds' ? 'no clouds' : 'no clear sky';
+      text = `${entry.compassLabel} — ${what} for ${entry.distanceMiles} mi (end of coverage)`;
     } else if (entry.clearSkyFound) {
       if (entry.searchMode === 'find-clouds') {
         // Found cloud boundary — cloud-dominant result
