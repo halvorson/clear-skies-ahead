@@ -177,6 +177,16 @@ The `dev` preview channel is a single persistent Firebase Hosting channel. It sh
 
 ---
 
+## Documentation policy
+
+**TASKS.md** — update on every PR. When completing work, move the relevant task card to completed (`[x]`) with a one-line note. When new work is identified mid-session, add a pending card before starting. TASKS.md should always reflect the actual state of the code.
+
+**PRD.md and TDD.md** — only update when cutting a minor version (`1.x.0`). These docs describe the product and architecture at a feature level; patch releases (copy tweaks, visual polish, bug fixes) do not need to touch them unless a spec was materially wrong.
+
+**README.md** — update version number and the "How it works" section whenever the user-facing behaviour changes enough to matter.
+
+---
+
 ## Analytics events
 
 | Event | Properties |
