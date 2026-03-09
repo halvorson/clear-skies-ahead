@@ -100,52 +100,51 @@ Once permissions are granted, the app runs a search along the user's exact compa
 
 ### 4.4 Loading Screen
 
-The loading screen mirrors the result screen layout for visual continuity:
-- Same header (spinning sun icon + title)
-- Card showing CSS spinner + status text (*"Heading 252.9° WSW…"*)
-- After origin sky check resolves: updates to *"Clear here — finding where it gets cloudy…"* or *"Cloudy here — finding clear sky…"*
-- Disabled **"Try a new direction"** button (prevents double-tap; keeps layout stable)
-- **PROGRESS section** — live log of every distance checked, newest at top, updated in two phases:
-  - Phase 1 (before API returns): shows the distance with *"checking…"* placeholder
+- Hero card (sky-blue gradient) with spinning sun icon, status text, and live progress log
+- Status text updates after origin check: *"Clear here — finding where it gets cloudy…"* or *"Cloudy here — finding clear sky…"*
+- Progress log lives inside the hero card (newest entry at top); each row goes through two phases:
+  - Phase 1 (before API returns): distance with *"checking…"* placeholder
   - Phase 2 (after API returns): resolves to ☀ *"clear!"*, ☁ *"cloudy (X%)"*, or *"out of coverage"*
-  - Phase separators: *"Scanning outward"* and *"Narrowing down"* labels appear between phases
+- Disabled **"Try a new direction"** button below the card (keeps layout stable)
 - **RECENT SEARCHES section** — read-only snapshot of history from before the search started
 
 ### 4.5 Result Display
 
-**Clear sky found (find-clear mode):**
-- Result card with a live compass arrow (rotates with device heading to always point toward the result)
-- Single headline: *"Sky is clear [X] miles [compass label] of you"*
-- City/state subtext when NWS coverage is available: *"near Portland, OR"*
+Hero card color reflects the *result* sky condition (not the origin): amber for sun-dominant, steel blue for cloud-dominant, muted grey for OOC/error.
+
+**Clear sky found (find-clear mode) — amber card:**
+- Live compass arrow (rotates with device heading to always point toward the result)
+- Large distance + compass label, caption: *"Clear sky begins near Portland, OR"*
 - **"Try a new direction"** button re-runs the full flow with the new bearing at the moment of tap (no permission re-request)
 
-**Clouds found (find-clouds mode):**
-- Result card with a live compass arrow pointing toward the cloud boundary
-- Single headline: *"Clouds start [X] miles [compass label] of you"*
-- City/state subtext when NWS coverage is available: *"near Portland, OR"*
+**Clouds found (find-clouds mode) — steel blue card:**
+- Live compass arrow pointing toward the cloud boundary
+- Large distance + compass label, caption: *"Clouds begin near Portland, OR"*
 - **"Try a new direction"** button re-runs the full flow
 
-**No clear sky within 1,000 miles (find-clear mode):**
-- Card headline: *"No clear sky within 1,000 miles [compass label]"*
+**No clear sky for 1,000 miles (find-clear mode) — steel blue card:**
+- Headline: *"No clear sky for 1,000 miles [compass label]"*
 - Subtext: *"Try scanning a different direction."*
 
-**No clouds within 1,000 miles (find-clouds mode):**
-- Card headline: *"Clear sky extends beyond 1,000 miles [compass label]"*
+**No clouds for 1,000 miles (find-clouds mode) — amber card:**
+- Headline: *"No clouds for 1,000 miles [compass label]"*
 - Subtext: *"No clouds in this direction — enjoy the sunshine."*
 
-**Out of coverage:**
-- Card headline: *"No coverage in this direction"*
-- Subtext: *"Checked up to [X] miles — NWS doesn't cover the ocean, Canada, or Mexico. Try a different direction."*
+**Out of coverage — muted grey card:**
+- Headline: *"Ran out of coverage at [X] miles"*
+- Subtext: *"This direction heads over the ocean or into a different country. Try again?"*
 
 ### 4.6 Search History
 
 - Within the current session, maintain a history list of past results below the CTA on both the result and error screens
-- Each history entry shows: a directional arrow icon (rotates live with compass to point toward that search's bearing), compass label, distance or result type, and time ago
-  - Clear result (find-clear): `navigation` icon (yellow-green) → *"NNW — 5.5 mi (8% clouds)"*
-  - No clear sky (find-clear): `navigation` icon (muted) → *"NNW — no clear sky (1000 mi checked)"*
-  - Out of coverage: `navigation` icon (muted) → *"NNW — no coverage (1000 mi)"*
-  - Clouds found (find-clouds): `navigation` icon (yellow-green) → *"NNW — clear for 5.5 mi"*
-  - No clouds (find-clouds): `navigation` icon (muted) → *"NNW — no clouds (1000 mi checked)"*
+- Each history entry shows: a directional arrow icon (rotates live with compass), compass label, result summary, and time ago
+- Icon color reflects the result: amber for sun-dominant, steel blue for cloud-dominant, grey for OOC
+  - Clear sky found (find-clear): amber → *"NNW — clear at 5.5 mi (8% clouds)"*
+  - No clear sky (find-clear): steel blue → *"NNW — no clear sky for 1,000 mi"*
+  - Clouds found (find-clouds): steel blue → *"NNW — clouds at 5.5 mi"*
+  - No clouds (find-clouds): amber → *"NNW — no clouds for 1,000 mi"*
+  - Out of coverage: grey → *"NNW — no clouds for 45 mi (end of coverage)"*
+- History section is scrollable (max 10 entries; oldest drops off when exceeded)
 - History is in-memory only; does not persist across sessions
 - Maximum 10 history entries; oldest drops off when exceeded
 

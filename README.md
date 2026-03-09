@@ -1,6 +1,6 @@
 # Clear Skies Ahead
 
-**v1.1.0** — March 2026
+**v1.1.1** — March 2026
 
 A progressive web app that answers one question: **how far do I need to travel to reach the edge of the current sky conditions?** If you're under clouds, it finds the nearest clear sky. If you're in sunshine, it finds where the clouds begin.
 
@@ -13,16 +13,16 @@ Point your phone, tap a button, get an answer. No map. No account required.
 
 ## How it works
 
-1. Tap **Find Clear Sky**
+1. Aim your phone and tap the button
 2. The app reads your GPS location and live compass bearing
 3. It checks sky cover at your current location to determine search direction:
    - **Cloudy?** Searches outward for the nearest clear sky
    - **Sunny?** Searches outward for where the clouds begin
 4. It scans at exponentially increasing distances — 1 mi, 2, 4, 8... up to 1,000 miles — using the free NOAA/NWS weather API
 5. When it finds the sky boundary, it binary-searches back toward you to narrow the result to the nearest half-mile
-6. You get a single answer: *"Sky is clear 5.5 miles E of you"* or *"Clouds start 12 miles NE of you"* — with a live compass arrow that rotates as you turn
+6. You get a single answer — *"Clear sky begins 5.5 mi E"* or *"Clouds begin 12 mi NE"* — with a live compass arrow that rotates as you turn
 
-The loading screen shows every distance checked in real time, annotated by phase (exponential scan → narrowing down).
+The hero card changes color to match the result: warm amber for sun-dominant outcomes, steel blue for cloud-dominant ones. The search progress log appears live inside the card as distances are checked.
 
 ---
 

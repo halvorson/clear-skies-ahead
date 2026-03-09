@@ -20,41 +20,20 @@ Read TASKS.md in the repo root. For every task listed under "Pending Tasks", imp
 
 ## Pending Tasks
 
-### Task 32 — UX Refresh
+### Task 32 — UX Refresh (visual + copy)
+`[x]` Shipped as v1.1.1. Hero card design (Inter font, large rounded gradient card), semantic color system (amber for sun-dominant, steel blue for cloud-dominant, muted grey for OOC), loading log inside hero card, CSS spinner removed, amber CTA, color-coded history compass icons, updated copy across all screens, scrollable history section. Page transitions remain pending — see Task 33.
+**Files changed:** `src/styles.css`, `src/ui/LandingScreen.ts`, `src/ui/LoadingScreen.ts`, `src/ui/ResultScreen.ts`, `src/ui/historyHelpers.ts`
+
+---
+
+### Task 33 — Page transitions
 `[ ]`
-**What:** A full visual and interaction refresh. The current UI is functional but generic. This task makes the experience feel purposeful — different when it's sunny vs. cloudy, smooth transitions between states, and copy that matches the product's personality.
+**What:** Screens currently snap in/out with no transition — jarring on a phone. Add a simple CSS fade between Landing → Loading → Result/Error.
 
-**Use the Anthropic Frontend Design skill** (`/frontend-design` or install from https://github.com/anthropics/skills) to guide the visual direction before writing code.
-
-**Visual differentiation by sky state:**
-- When the origin is clear (find-clouds mode): warm, golden/yellow-green palette, sun-forward imagery, bright and open feel
-- When the origin is cloudy (find-clear mode): cool, blue-grey palette, overcast feel that "lifts" to sunshine on the result
-- Landing screen: stays neutral until sky state is known; can default to a split treatment or a simple welcoming tone
-- Result card: background or accent color shifts to match the outcome (sunny result = warm; cloudy result = cool-grey)
-
-**Page transitions:**
-- Current issue: screens snap in/out with no transition — jarring on a phone
-- Add a simple CSS fade or slide transition when switching between Landing → Loading → Result/Error
-- Use `requestAnimationFrame` or CSS `@starting-style` / `transition` on `.screen` visibility
-- Transitions should take ~200ms — fast enough to not feel sluggish, slow enough to feel smooth
-- The layout should NOT reflow or jump during transitions; preserve scroll position
-
-**History with rotating compasses:**
-- Confirmed working in v1.1.0, but review the visual weight — icons should feel alive, not like noise
-- Ensure history section animates in smoothly on result/error screen load (stagger or fade-in)
-
-**Progress during search (Loading screen):**
-- Confirm no layout jumping as rows populate
-- The status text ("Cloudy here — finding clear sky…") should animate in after the origin check
-- Consider a subtle pulse or shimmer on the in-progress row
-
-**Copy updates:**
-- Landing CTA: currently "Find Clear Sky" — update to something that works for both modes. Options: "Check the sky", "Read the sky", "What's coming?", or keep it. Michael's call, but make a recommendation.
-- Result headlines: review all 5 states for tone — should feel like a friend telling you, not a data readout
-- History labels: make sure they're scannable at a glance
-- No-result and error states: warmer, less robotic copy
-
-**Files likely touched:** `src/styles.css`, `src/ui/LandingScreen.ts`, `src/ui/LoadingScreen.ts`, `src/ui/ResultScreen.ts`, `src/ui/ErrorScreen.ts`, `src/ui/historyHelpers.ts`
+- Add a ~200ms opacity fade on `.screen` show/hide (CSS `transition: opacity 200ms ease`)
+- Use `requestAnimationFrame` to let the new screen render at opacity 0 before starting the fade-in
+- The layout must NOT reflow or jump; preserve scroll position
+- No transition on initial page load
 
 ---
 

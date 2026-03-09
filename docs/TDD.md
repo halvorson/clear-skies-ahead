@@ -417,18 +417,32 @@ Constructor: `(container, errorType, onRetry, debugContext?, history: HistoryEnt
 ## 6. Design Tokens (src/styles.css)
 
 ```css
---md-sys-color-primary: #b8c232          /* yellow-green */
---md-sys-color-on-primary: #1c1c00
+--md-sys-color-primary: #d48020          /* warm amber — CTA button */
+--md-sys-color-on-primary: #ffffff
 --md-sys-color-secondary: #5db8d4        /* sky blue */
 --md-sys-color-on-secondary: #ffffff
 ```
 
 Key values:
-- Background: `#fafcff`
+- Font: Inter (400/500/600/700/800), loaded via Google Fonts
+- Background: `#f0f4f8`
 - Text primary: `#1b1c1e`
-- Text secondary: `#44474e`
-- CSS spinner: `border: 4px solid rgba(93,184,212,0.25); border-top-color: #5db8d4; animation: css-spin 0.8s linear infinite`
-- Sun spin: `animation: spin 6s linear infinite`
+
+**Hero card gradients** — color reflects the *result* sky condition, not the origin:
+
+| Class | Meaning | Gradient |
+|---|---|---|
+| `hero-card--sky` | Landing / loading | `#4da8c8 → #7cc4dc → #aadaee` |
+| `hero-card--sunny` | Sun-dominant: found clear sky, or no clouds within 1,000 mi | `#d08018 → #eeaa38 → #f8cc68` |
+| `hero-card--cloudy` | Cloud-dominant: found cloud boundary, or no clear sky within 1,000 mi | `#2a5878 → #4a80a8 → #78aac4` |
+| `hero-card--muted` | OOC / error | `#5878a0 → #8298b8 → #aabccc` |
+
+**History icon colors:**
+- `.history-icon--sunny` (#d48020): sun-dominant outcomes (found clear sky; no clouds found)
+- `.history-icon--cloudy` (#4a80a8): cloud-dominant outcomes (found cloud boundary; no clear sky found)
+- `.history-icon--no-result` (rgba 0,0,0,0.28): out of coverage
+
+**Loading screen:** Spinning `wb_sunny` icon only — no CSS spinner. Progress log lives inside the hero card (max-height 180px, newest entry first).
 
 ---
 
