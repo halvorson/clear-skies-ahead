@@ -16,12 +16,35 @@ export class LandingScreen {
         <span slot="icon" class="material-symbols-rounded">my_location</span>
         Find Clear Sky
       </md-filled-button>
-      <p class="app-version">v${__APP_VERSION__}${import.meta.env.VITE_APP_ENV === 'preproduction' ? '+' : ''}</p>
+      <div class="app-footer">
+        <p class="app-version">v${__APP_VERSION__}${import.meta.env.VITE_APP_ENV === 'preproduction' ? '+' : ''}</p>
+        <button class="share-btn" aria-label="Share this app">
+          <span class="material-symbols-rounded">share</span>
+        </button>
+      </div>
     `;
     container.appendChild(this.el);
 
     const btn = this.el.querySelector('.landing-btn') as HTMLElement;
     btn.addEventListener('click', onCtaTap);
+
+    const shareBtn = this.el.querySelector('.share-btn') as HTMLElement;
+    shareBtn.addEventListener('click', () => {
+      if (navigator.share) {
+        navigator.share({
+          title: 'Clear Skies Ahead',
+          text: 'Point your phone and find out how far you need to travel to reach clear sky.',
+          url: window.location.href,
+        }).catch(() => {/* user cancelled */});
+      } else {
+        navigator.clipboard.writeText(window.location.href).then(() => {
+          shareBtn.querySelector('.material-symbols-rounded')!.textContent = 'check';
+          setTimeout(() => {
+            shareBtn.querySelector('.material-symbols-rounded')!.textContent = 'share';
+          }, 2000);
+        });
+      }
+    });
   }
 
   show(): void { this.el.style.display = ''; }

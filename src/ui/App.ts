@@ -41,6 +41,7 @@ export class App {
 
   private showLanding(): void {
     this.state = 'LANDING';
+    document.title = 'Clear Skies Ahead';
     this.transition(new LandingScreen(this.container, () => this.startSearch()));
   }
 
@@ -156,6 +157,9 @@ export class App {
 
   private showResult(result: SearchResult): void {
     this.state = 'RESULT';
+    if (result.clearSkyFound) {
+      document.title = `${result.nearestClearMiles} mi ${result.compassLabel} — Clear Skies Ahead`;
+    }
     this.transition(
       new ResultScreen(this.container, result, [...this.history], () =>
         this.startSearch(),
